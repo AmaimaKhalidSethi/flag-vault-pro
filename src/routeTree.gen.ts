@@ -13,8 +13,13 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppTeamRouteImport } from './routes/_app.team'
+import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppWriteupsIndexRouteImport } from './routes/_app.writeups.index'
+import { Route as AppWriteupsNewRouteImport } from './routes/_app.writeups.new'
+import { Route as AppWriteupsSlugRouteImport } from './routes/_app.writeups.$slug'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -35,6 +40,21 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppTeamRoute = AppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -45,12 +65,27 @@ const AppWriteupsIndexRoute = AppWriteupsIndexRouteImport.update({
   path: '/writeups/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWriteupsNewRoute = AppWriteupsNewRouteImport.update({
+  id: '/writeups/new',
+  path: '/writeups/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWriteupsSlugRoute = AppWriteupsSlugRouteImport.update({
+  id: '/writeups/$slug',
+  path: '/writeups/$slug',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/dashboard': typeof AppDashboardRoute
+  '/profile': typeof AppProfileRoute
+  '/settings': typeof AppSettingsRoute
+  '/team': typeof AppTeamRoute
+  '/writeups/$slug': typeof AppWriteupsSlugRoute
+  '/writeups/new': typeof AppWriteupsNewRoute
   '/writeups/': typeof AppWriteupsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -58,6 +93,11 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/dashboard': typeof AppDashboardRoute
+  '/profile': typeof AppProfileRoute
+  '/settings': typeof AppSettingsRoute
+  '/team': typeof AppTeamRoute
+  '/writeups/$slug': typeof AppWriteupsSlugRoute
+  '/writeups/new': typeof AppWriteupsNewRoute
   '/writeups': typeof AppWriteupsIndexRoute
 }
 export interface FileRoutesById {
@@ -67,13 +107,38 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/onboarding': typeof OnboardingRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/profile': typeof AppProfileRoute
+  '/_app/settings': typeof AppSettingsRoute
+  '/_app/team': typeof AppTeamRoute
+  '/_app/writeups/$slug': typeof AppWriteupsSlugRoute
+  '/_app/writeups/new': typeof AppWriteupsNewRoute
   '/_app/writeups/': typeof AppWriteupsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/onboarding' | '/dashboard' | '/writeups/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/dashboard'
+    | '/profile'
+    | '/settings'
+    | '/team'
+    | '/writeups/$slug'
+    | '/writeups/new'
+    | '/writeups/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/onboarding' | '/dashboard' | '/writeups'
+  to:
+    | '/'
+    | '/auth'
+    | '/onboarding'
+    | '/dashboard'
+    | '/profile'
+    | '/settings'
+    | '/team'
+    | '/writeups/$slug'
+    | '/writeups/new'
+    | '/writeups'
   id:
     | '__root__'
     | '/'
@@ -81,6 +146,11 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/_app/dashboard'
+    | '/_app/profile'
+    | '/_app/settings'
+    | '/_app/team'
+    | '/_app/writeups/$slug'
+    | '/_app/writeups/new'
     | '/_app/writeups/'
   fileRoutesById: FileRoutesById
 }
@@ -121,6 +191,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/team': {
+      id: '/_app/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof AppTeamRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/profile': {
+      id: '/_app/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -135,16 +226,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWriteupsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/writeups/new': {
+      id: '/_app/writeups/new'
+      path: '/writeups/new'
+      fullPath: '/writeups/new'
+      preLoaderRoute: typeof AppWriteupsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/writeups/$slug': {
+      id: '/_app/writeups/$slug'
+      path: '/writeups/$slug'
+      fullPath: '/writeups/$slug'
+      preLoaderRoute: typeof AppWriteupsSlugRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppTeamRoute: typeof AppTeamRoute
+  AppWriteupsSlugRoute: typeof AppWriteupsSlugRoute
+  AppWriteupsNewRoute: typeof AppWriteupsNewRoute
   AppWriteupsIndexRoute: typeof AppWriteupsIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppTeamRoute: AppTeamRoute,
+  AppWriteupsSlugRoute: AppWriteupsSlugRoute,
+  AppWriteupsNewRoute: AppWriteupsNewRoute,
   AppWriteupsIndexRoute: AppWriteupsIndexRoute,
 }
 
