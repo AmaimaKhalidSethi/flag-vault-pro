@@ -14,16 +14,265 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          writeup_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          writeup_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          writeup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_writeup_id_fkey"
+            columns: ["writeup_id"]
+            isOneToOne: false
+            referencedRelation: "writeups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ctf_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          team_id: string | null
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          team_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          team_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          color: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          invite_code: string
+          name: string
+          owner_id: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          name: string
+          owner_id: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invite_code?: string
+          name?: string
+          owner_id?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      writeup_tags: {
+        Row: {
+          tag_id: string
+          writeup_id: string
+        }
+        Insert: {
+          tag_id: string
+          writeup_id: string
+        }
+        Update: {
+          tag_id?: string
+          writeup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "writeup_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "writeup_tags_writeup_id_fkey"
+            columns: ["writeup_id"]
+            isOneToOne: false
+            referencedRelation: "writeups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      writeups: {
+        Row: {
+          author_id: string
+          body_md: string
+          category: Database["public"]["Enums"]["category"]
+          created_at: string
+          difficulty: Database["public"]["Enums"]["difficulty"]
+          event_id: string | null
+          flag: string | null
+          id: string
+          is_published: boolean
+          points: number
+          slug: string
+          summary: string | null
+          team_id: string | null
+          title: string
+          tools_used: string[]
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body_md?: string
+          category?: Database["public"]["Enums"]["category"]
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty"]
+          event_id?: string | null
+          flag?: string | null
+          id?: string
+          is_published?: boolean
+          points?: number
+          slug: string
+          summary?: string | null
+          team_id?: string | null
+          title: string
+          tools_used?: string[]
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body_md?: string
+          category?: Database["public"]["Enums"]["category"]
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty"]
+          event_id?: string | null
+          flag?: string | null
+          id?: string
+          is_published?: boolean
+          points?: number
+          slug?: string
+          summary?: string | null
+          team_id?: string | null
+          title?: string
+          tools_used?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "writeups_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "ctf_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "writeups_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_team_id: { Args: never; Returns: string }
+      is_team_member: { Args: { _team_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      category:
+        | "web"
+        | "pwn"
+        | "crypto"
+        | "forensics"
+        | "rev"
+        | "misc"
+        | "osint"
+      difficulty: "easy" | "medium" | "hard" | "insane"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +399,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      category: ["web", "pwn", "crypto", "forensics", "rev", "misc", "osint"],
+      difficulty: ["easy", "medium", "hard", "insane"],
+    },
   },
 } as const
