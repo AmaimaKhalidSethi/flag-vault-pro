@@ -84,7 +84,7 @@ function WriteupsList() {
   }, [debouncedQ, debouncedAuthor, search.category, search.difficulty, search.event, search.tags, search.from, search.to]);
 
   function update(patch: Partial<z.infer<typeof searchSchema>>) {
-    navigate({ search: (prev) => ({ ...prev, ...patch }) });
+    navigate({ search: (prev: z.infer<typeof searchSchema>) => ({ ...prev, ...patch }) });
   }
 
   function toggleArr<T extends string>(key: "category" | "difficulty", value: T) {
