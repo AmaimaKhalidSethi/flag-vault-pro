@@ -18,8 +18,10 @@ import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as UUsernameIndexRouteImport } from './routes/u.$username.index'
 import { Route as AppWriteupsIndexRouteImport } from './routes/_app.writeups.index'
 import { Route as AppEventsIndexRouteImport } from './routes/_app.events.index'
+import { Route as UUsernameSlugRouteImport } from './routes/u.$username.$slug'
 import { Route as AppWriteupsNewRouteImport } from './routes/_app.writeups.new'
 import { Route as AppWriteupsSlugRouteImport } from './routes/_app.writeups.$slug'
 import { Route as AppEventsNewRouteImport } from './routes/_app.events.new'
@@ -69,6 +71,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const UUsernameIndexRoute = UUsernameIndexRouteImport.update({
+  id: '/u/$username/',
+  path: '/u/$username/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppWriteupsIndexRoute = AppWriteupsIndexRouteImport.update({
   id: '/writeups/',
   path: '/writeups/',
@@ -78,6 +85,11 @@ const AppEventsIndexRoute = AppEventsIndexRouteImport.update({
   id: '/events/',
   path: '/events/',
   getParentRoute: () => AppRoute,
+} as any)
+const UUsernameSlugRoute = UUsernameSlugRouteImport.update({
+  id: '/u/$username/$slug',
+  path: '/u/$username/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppWriteupsNewRoute = AppWriteupsNewRouteImport.update({
   id: '/writeups/new',
@@ -113,8 +125,10 @@ export interface FileRoutesByFullPath {
   '/events/new': typeof AppEventsNewRoute
   '/writeups/$slug': typeof AppWriteupsSlugRoute
   '/writeups/new': typeof AppWriteupsNewRoute
+  '/u/$username/$slug': typeof UUsernameSlugRoute
   '/events/': typeof AppEventsIndexRoute
   '/writeups/': typeof AppWriteupsIndexRoute
+  '/u/$username/': typeof UUsernameIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -129,8 +143,10 @@ export interface FileRoutesByTo {
   '/events/new': typeof AppEventsNewRoute
   '/writeups/$slug': typeof AppWriteupsSlugRoute
   '/writeups/new': typeof AppWriteupsNewRoute
+  '/u/$username/$slug': typeof UUsernameSlugRoute
   '/events': typeof AppEventsIndexRoute
   '/writeups': typeof AppWriteupsIndexRoute
+  '/u/$username': typeof UUsernameIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -147,8 +163,10 @@ export interface FileRoutesById {
   '/_app/events/new': typeof AppEventsNewRoute
   '/_app/writeups/$slug': typeof AppWriteupsSlugRoute
   '/_app/writeups/new': typeof AppWriteupsNewRoute
+  '/u/$username/$slug': typeof UUsernameSlugRoute
   '/_app/events/': typeof AppEventsIndexRoute
   '/_app/writeups/': typeof AppWriteupsIndexRoute
+  '/u/$username/': typeof UUsernameIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -165,8 +183,10 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/writeups/$slug'
     | '/writeups/new'
+    | '/u/$username/$slug'
     | '/events/'
     | '/writeups/'
+    | '/u/$username/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -181,8 +201,10 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/writeups/$slug'
     | '/writeups/new'
+    | '/u/$username/$slug'
     | '/events'
     | '/writeups'
+    | '/u/$username'
   id:
     | '__root__'
     | '/'
@@ -198,8 +220,10 @@ export interface FileRouteTypes {
     | '/_app/events/new'
     | '/_app/writeups/$slug'
     | '/_app/writeups/new'
+    | '/u/$username/$slug'
     | '/_app/events/'
     | '/_app/writeups/'
+    | '/u/$username/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -208,6 +232,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   OnboardingRoute: typeof OnboardingRoute
   JoinInvite_codeRoute: typeof JoinInvite_codeRoute
+  UUsernameSlugRoute: typeof UUsernameSlugRoute
+  UUsernameIndexRoute: typeof UUsernameIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -275,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/u/$username/': {
+      id: '/u/$username/'
+      path: '/u/$username'
+      fullPath: '/u/$username/'
+      preLoaderRoute: typeof UUsernameIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/writeups/': {
       id: '/_app/writeups/'
       path: '/writeups'
@@ -288,6 +321,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/events/'
       preLoaderRoute: typeof AppEventsIndexRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/u/$username/$slug': {
+      id: '/u/$username/$slug'
+      path: '/u/$username/$slug'
+      fullPath: '/u/$username/$slug'
+      preLoaderRoute: typeof UUsernameSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/writeups/new': {
       id: '/_app/writeups/new'
@@ -354,6 +394,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   OnboardingRoute: OnboardingRoute,
   JoinInvite_codeRoute: JoinInvite_codeRoute,
+  UUsernameSlugRoute: UUsernameSlugRoute,
+  UUsernameIndexRoute: UUsernameIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
