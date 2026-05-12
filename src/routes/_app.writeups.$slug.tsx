@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { renderMarkdown } from "@/lib/markdown";
 import { categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
-import { Eye, EyeOff, MessageCircle, Sparkles, Trash2 } from "lucide-react";
+import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { aiSummarize, getAnthropicKey } from "@/lib/ai";
 
 export const Route = createFileRoute("/_app/writeups/$slug")({
   component: WriteupDetail,
@@ -15,8 +16,9 @@ export const Route = createFileRoute("/_app/writeups/$slug")({
 type Wu = {
   id: string; title: string; body_md: string; summary: string | null;
   category: Category; difficulty: Difficulty; points: number;
-  flag: string | null; tools_used: string[]; created_at: string;
-  author_id: string; event_id: string | null;
+  flag: string | null; tools_used: string[]; tags: string[];
+  created_at: string; author_id: string; event_id: string | null;
+  is_published: boolean;
   profiles: { username: string | null; avatar_url: string | null } | null;
   ctf_events: { name: string; url: string | null } | null;
 };
@@ -34,6 +36,7 @@ function WriteupDetail() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [draft, setDraft] = useState("");
   const [me, setMe] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
@@ -59,7 +62,6 @@ function WriteupDetail() {
     })();
   }, [slug]);
 
-  // realtime
   useEffect(() => {
     if (!wu) return;
     const ch = supabase
@@ -80,14 +82,11 @@ function WriteupDetail() {
 
   const html = useMemo(() => renderMarkdown(wu?.body_md ?? ""), [wu?.body_md]);
 
-  // wire copy buttons in markdown output
   useEffect(() => {
     function handler(e: Event) {
       const t = e.target as HTMLElement;
-      if (t.matches?.("button[data-copy]")) {
-        navigator.clipboard.writeText(t.getAttribute("data-copy") ?? "");
-        toast.success("Copied");
-      }
+      const btn = t.closest?.("button[data-copy]") as HTMLElement | null;
+      if (btn) { navigator.clipboard.writeText(btn.getAttribute("data-copy") ?? ""); toast.success("Copied"); }
     }
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
@@ -96,22 +95,56 @@ function WriteupDetail() {
   async function postComment() {
     if (!draft.trim() || !wu || !me) return;
     const { error } = await supabase.from("comments").insert({ writeup_id: wu.id, author_id: me, body: draft.trim() });
-    if (error) toast.error(error.message);
-    else setDraft("");
+    if (error) toast.error(error.message); else setDraft("");
   }
   async function deleteComment(id: string) {
     const { error } = await supabase.from("comments").delete().eq("id", id);
     if (error) toast.error(error.message);
   }
+  function copyFlag() {
+    if (!wu?.flag) return;
+    navigator.clipboard.writeText(wu.flag);
+    toast.success("Copied!");
+  }
+  function copyPublicLink() {
+    if (!wu) return;
+    const username = wu.profiles?.username ?? "anon";
+    const url = `${window.location.origin}/u/${username}/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Public link copied");
+  }
+  async function runSummarize() {
+    if (!wu) return;
+    if (!getAnthropicKey()) return toast.error("AI failed — check your Anthropic API key in Settings.");
+    setAiBusy(true);
+    try {
+      const s = await aiSummarize(`${wu.title}\n\n${wu.body_md}`);
+      const { error } = await supabase.from("writeups").update({ summary: s }).eq("id", wu.id);
+      if (error) throw error;
+      setWu({ ...wu, summary: s });
+      toast.success("Summary updated");
+    } catch {
+      toast.error("AI failed — check your Anthropic API key in Settings.");
+    } finally { setAiBusy(false); }
+  }
 
   if (loading) return <div className="p-6 mono text-sm text-muted-foreground">loading…</div>;
   if (!wu) return <div className="p-6">Not found.</div>;
+
+  const isAuthor = me === wu.author_id;
 
   return (
     <div className="p-6 max-w-6xl mx-auto grid lg:grid-cols-[1fr_280px] gap-6">
       <article className="min-w-0">
         <Link to="/writeups" className="text-xs mono text-primary hover:underline">← /writeups</Link>
-        <h1 className="text-3xl font-bold mt-2">{wu.title}</h1>
+        <div className="flex items-start justify-between gap-3 mt-2">
+          <h1 className="text-3xl font-bold">{wu.title}</h1>
+          {wu.is_published && (
+            <Button size="sm" variant="outline" onClick={copyPublicLink}>
+              <Share2 className="size-3.5 mr-1" />Copy public link
+            </Button>
+          )}
+        </div>
         {wu.summary && <p className="text-muted-foreground mt-2">{wu.summary}</p>}
         <div className="flex flex-wrap gap-1.5 mt-3 text-xs">
           <span className={`px-1.5 py-0.5 rounded ${categoryClass[wu.category]}`}>{wu.category}</span>
@@ -122,7 +155,6 @@ function WriteupDetail() {
 
         <div className="mt-6 prose-cyber" dangerouslySetInnerHTML={{ __html: html }} />
 
-        {/* Comments */}
         <section className="mt-12">
           <h2 className="font-semibold flex items-center gap-2"><MessageCircle className="size-4" /> Comments ({comments.length})</h2>
           <div className="mt-3 space-y-3">
@@ -157,7 +189,8 @@ function WriteupDetail() {
               <dd className="flex items-center gap-2 mt-1">
                 {wu.flag ? (
                   <>
-                    <code className={`mono text-xs bg-muted px-2 py-1 rounded flex-1 truncate ${!revealFlag ? "flag-blur" : ""}`}>{wu.flag}</code>
+                    <code onClick={copyFlag} title="Click to copy"
+                          className={`mono text-xs bg-muted px-2 py-1 rounded flex-1 truncate cursor-pointer ${!revealFlag ? "flag-blur" : ""}`}>{wu.flag}</code>
                     <button onClick={() => setRevealFlag(!revealFlag)} className="text-muted-foreground hover:text-primary">
                       {revealFlag ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -170,6 +203,14 @@ function WriteupDetail() {
                 <dt className="text-xs text-muted-foreground">Tools</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
                   {wu.tools_used.map(t => <span key={t} className="text-xs mono bg-muted px-1.5 py-0.5 rounded">{t}</span>)}
+                </dd>
+              </div>
+            )}
+            {wu.tags?.length > 0 && (
+              <div>
+                <dt className="text-xs text-muted-foreground">Tags</dt>
+                <dd className="mt-1 flex flex-wrap gap-1">
+                  {wu.tags.map(t => <span key={t} className="text-xs mono bg-muted px-1.5 py-0.5 rounded">#{t}</span>)}
                 </dd>
               </div>
             )}
@@ -186,15 +227,18 @@ function WriteupDetail() {
           </dl>
         </div>
 
-        <div className="bg-card border border-dashed border-primary/40 rounded-lg p-4">
-          <h3 className="font-semibold text-sm flex items-center gap-1.5"><Sparkles className="size-4 text-primary" /> AI Summary</h3>
-          <p className="text-xs text-muted-foreground mt-2">
-            Connect your Anthropic API key in <Link to="/settings" className="text-primary underline">Settings</Link> to enable auto-summarize, auto-tag, and writing suggestions.
-          </p>
-          <button disabled className="mt-3 w-full text-xs border border-border rounded-md px-3 py-1.5 text-muted-foreground cursor-not-allowed">
-            Auto-summarize (requires API key)
-          </button>
-        </div>
+        {isAuthor && (
+          <div className="bg-card border border-dashed border-primary/40 rounded-lg p-4">
+            <h3 className="font-semibold text-sm flex items-center gap-1.5"><Sparkles className="size-4 text-primary" /> AI</h3>
+            <p className="text-xs text-muted-foreground mt-2">
+              Uses your <Link to="/settings" className="text-primary underline">Anthropic key</Link>. Stored locally only.
+            </p>
+            <Button size="sm" variant="outline" disabled={aiBusy} onClick={runSummarize} className="w-full mt-3">
+              {aiBusy ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <Sparkles className="size-3.5 mr-1" />}
+              Auto-summarize
+            </Button>
+          </div>
+        )}
       </aside>
     </div>
   );
