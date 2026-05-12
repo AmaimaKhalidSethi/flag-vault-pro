@@ -13,13 +13,17 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as JoinInvite_codeRouteImport } from './routes/join.$invite_code'
 import { Route as AppTeamRouteImport } from './routes/_app.team'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppWriteupsIndexRouteImport } from './routes/_app.writeups.index'
+import { Route as AppEventsIndexRouteImport } from './routes/_app.events.index'
 import { Route as AppWriteupsNewRouteImport } from './routes/_app.writeups.new'
 import { Route as AppWriteupsSlugRouteImport } from './routes/_app.writeups.$slug'
+import { Route as AppEventsNewRouteImport } from './routes/_app.events.new'
+import { Route as AppEventsIdRouteImport } from './routes/_app.events.$id'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -38,6 +42,11 @@ const AppRoute = AppRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinInvite_codeRoute = JoinInvite_codeRouteImport.update({
+  id: '/join/$invite_code',
+  path: '/join/$invite_code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppTeamRoute = AppTeamRouteImport.update({
@@ -65,6 +74,11 @@ const AppWriteupsIndexRoute = AppWriteupsIndexRouteImport.update({
   path: '/writeups/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEventsIndexRoute = AppEventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppWriteupsNewRoute = AppWriteupsNewRouteImport.update({
   id: '/writeups/new',
   path: '/writeups/new',
@@ -73,6 +87,16 @@ const AppWriteupsNewRoute = AppWriteupsNewRouteImport.update({
 const AppWriteupsSlugRoute = AppWriteupsSlugRouteImport.update({
   id: '/writeups/$slug',
   path: '/writeups/$slug',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEventsNewRoute = AppEventsNewRouteImport.update({
+  id: '/events/new',
+  path: '/events/new',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEventsIdRoute = AppEventsIdRouteImport.update({
+  id: '/events/$id',
+  path: '/events/$id',
   getParentRoute: () => AppRoute,
 } as any)
 
@@ -84,8 +108,12 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/team': typeof AppTeamRoute
+  '/join/$invite_code': typeof JoinInvite_codeRoute
+  '/events/$id': typeof AppEventsIdRoute
+  '/events/new': typeof AppEventsNewRoute
   '/writeups/$slug': typeof AppWriteupsSlugRoute
   '/writeups/new': typeof AppWriteupsNewRoute
+  '/events/': typeof AppEventsIndexRoute
   '/writeups/': typeof AppWriteupsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -96,8 +124,12 @@ export interface FileRoutesByTo {
   '/profile': typeof AppProfileRoute
   '/settings': typeof AppSettingsRoute
   '/team': typeof AppTeamRoute
+  '/join/$invite_code': typeof JoinInvite_codeRoute
+  '/events/$id': typeof AppEventsIdRoute
+  '/events/new': typeof AppEventsNewRoute
   '/writeups/$slug': typeof AppWriteupsSlugRoute
   '/writeups/new': typeof AppWriteupsNewRoute
+  '/events': typeof AppEventsIndexRoute
   '/writeups': typeof AppWriteupsIndexRoute
 }
 export interface FileRoutesById {
@@ -110,8 +142,12 @@ export interface FileRoutesById {
   '/_app/profile': typeof AppProfileRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/team': typeof AppTeamRoute
+  '/join/$invite_code': typeof JoinInvite_codeRoute
+  '/_app/events/$id': typeof AppEventsIdRoute
+  '/_app/events/new': typeof AppEventsNewRoute
   '/_app/writeups/$slug': typeof AppWriteupsSlugRoute
   '/_app/writeups/new': typeof AppWriteupsNewRoute
+  '/_app/events/': typeof AppEventsIndexRoute
   '/_app/writeups/': typeof AppWriteupsIndexRoute
 }
 export interface FileRouteTypes {
@@ -124,8 +160,12 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/team'
+    | '/join/$invite_code'
+    | '/events/$id'
+    | '/events/new'
     | '/writeups/$slug'
     | '/writeups/new'
+    | '/events/'
     | '/writeups/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -136,8 +176,12 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings'
     | '/team'
+    | '/join/$invite_code'
+    | '/events/$id'
+    | '/events/new'
     | '/writeups/$slug'
     | '/writeups/new'
+    | '/events'
     | '/writeups'
   id:
     | '__root__'
@@ -149,8 +193,12 @@ export interface FileRouteTypes {
     | '/_app/profile'
     | '/_app/settings'
     | '/_app/team'
+    | '/join/$invite_code'
+    | '/_app/events/$id'
+    | '/_app/events/new'
     | '/_app/writeups/$slug'
     | '/_app/writeups/new'
+    | '/_app/events/'
     | '/_app/writeups/'
   fileRoutesById: FileRoutesById
 }
@@ -159,6 +207,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
   OnboardingRoute: typeof OnboardingRoute
+  JoinInvite_codeRoute: typeof JoinInvite_codeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -189,6 +238,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join/$invite_code': {
+      id: '/join/$invite_code'
+      path: '/join/$invite_code'
+      fullPath: '/join/$invite_code'
+      preLoaderRoute: typeof JoinInvite_codeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/team': {
@@ -226,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWriteupsIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/events/': {
+      id: '/_app/events/'
+      path: '/events'
+      fullPath: '/events/'
+      preLoaderRoute: typeof AppEventsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/writeups/new': {
       id: '/_app/writeups/new'
       path: '/writeups/new'
@@ -240,6 +303,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWriteupsSlugRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/events/new': {
+      id: '/_app/events/new'
+      path: '/events/new'
+      fullPath: '/events/new'
+      preLoaderRoute: typeof AppEventsNewRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/events/$id': {
+      id: '/_app/events/$id'
+      path: '/events/$id'
+      fullPath: '/events/$id'
+      preLoaderRoute: typeof AppEventsIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -248,8 +325,11 @@ interface AppRouteChildren {
   AppProfileRoute: typeof AppProfileRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTeamRoute: typeof AppTeamRoute
+  AppEventsIdRoute: typeof AppEventsIdRoute
+  AppEventsNewRoute: typeof AppEventsNewRoute
   AppWriteupsSlugRoute: typeof AppWriteupsSlugRoute
   AppWriteupsNewRoute: typeof AppWriteupsNewRoute
+  AppEventsIndexRoute: typeof AppEventsIndexRoute
   AppWriteupsIndexRoute: typeof AppWriteupsIndexRoute
 }
 
@@ -258,8 +338,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppProfileRoute: AppProfileRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTeamRoute: AppTeamRoute,
+  AppEventsIdRoute: AppEventsIdRoute,
+  AppEventsNewRoute: AppEventsNewRoute,
   AppWriteupsSlugRoute: AppWriteupsSlugRoute,
   AppWriteupsNewRoute: AppWriteupsNewRoute,
+  AppEventsIndexRoute: AppEventsIndexRoute,
   AppWriteupsIndexRoute: AppWriteupsIndexRoute,
 }
 
@@ -270,7 +353,18 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
   OnboardingRoute: OnboardingRoute,
+  JoinInvite_codeRoute: JoinInvite_codeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
