@@ -128,7 +128,7 @@ function AppLayout() {
         </main>
 
         {/* Mobile bottom tabs */}
-        <nav className="md:hidden border-t border-border bg-card grid grid-cols-5">
+        <nav className="md:hidden border-t border-border bg-card grid grid-cols-6">
           {NAV.map((n) => {
             const active = path === n.to || path.startsWith(n.to + "/");
             return (
