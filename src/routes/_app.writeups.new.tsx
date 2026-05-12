@@ -1,15 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import CodeMirror from "@uiw/react-codemirror";
-import { markdown } from "@codemirror/lang-markdown";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, slugify, type Category, type Difficulty } from "@/lib/categories";
-import { renderMarkdown } from "@/lib/markdown";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Save, X } from "lucide-react";
+import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag } from "lucide-react";
 import { toast } from "sonner";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { aiSummarize, aiAutoTag, getAnthropicKey } from "@/lib/ai";
 
 export const Route = createFileRoute("/_app/writeups/new")({
   head: () => ({ meta: [{ title: "New writeup — Flagvault" }] }),
@@ -34,9 +32,11 @@ function NewWriteup() {
   const [revealFlag, setRevealFlag] = useState(false);
   const [tools, setTools] = useState<string[]>([]);
   const [toolDraft, setToolDraft] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
   const [eventId, setEventId] = useState<string>("");
-  const [publish, setPublish] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState<null | "sum" | "tag">(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -49,17 +49,38 @@ function NewWriteup() {
     });
   }, []);
 
-  const html = useMemo(() => renderMarkdown(body), [body]);
-
-  function addTool() {
-    const t = toolDraft.trim();
-    if (t && !tools.includes(t)) setTools([...tools, t]);
-    setToolDraft("");
+  function addItem(set: (v: string[]) => void, list: string[], v: string, clear: () => void) {
+    const t = v.trim().toLowerCase();
+    if (t && !list.includes(t)) set([...list, t]);
+    clear();
   }
 
-  async function save() {
+  async function runSummarize() {
+    if (!getAnthropicKey()) return toast.error("AI failed — check your Anthropic API key in Settings.");
+    setAiBusy("sum");
+    try {
+      const s = await aiSummarize(`${title}\n\n${body}`);
+      if (s) setSummary(s);
+      toast.success("Summary generated");
+    } catch {
+      toast.error("AI failed — check your Anthropic API key in Settings.");
+    } finally { setAiBusy(null); }
+  }
+  async function runAutoTag() {
+    if (!getAnthropicKey()) return toast.error("AI failed — check your Anthropic API key in Settings.");
+    setAiBusy("tag");
+    try {
+      const t = await aiAutoTag(`${title}\n\n${body}`);
+      if (t.length) setTags(Array.from(new Set([...tags, ...t])).slice(0, 10));
+      toast.success(`Added ${t.length} tags`);
+    } catch {
+      toast.error("AI failed — check your Anthropic API key in Settings.");
+    } finally { setAiBusy(null); }
+  }
+
+  async function save(publish: boolean) {
     if (!userId) return toast.error("Not signed in");
-    if (!title) return toast.error("Title required");
+    if (!title.trim()) return toast.error("Title required");
     setBusy(true);
     const slug = `${slugify(title)}-${Math.random().toString(36).slice(2, 6)}`;
     const { data, error } = await supabase.from("writeups").insert({
@@ -67,6 +88,7 @@ function NewWriteup() {
       difficulty, category, points: Number(points) || 0,
       flag: flag || null,
       tools_used: tools,
+      tags,
       is_published: publish,
       team_id: teamId,
       author_id: userId,
@@ -78,9 +100,21 @@ function NewWriteup() {
     nav({ to: "/writeups/$slug", params: { slug: data.slug } });
   }
 
+  const aiToolbar = (
+    <>
+      <Button size="sm" variant="outline" disabled={aiBusy !== null} onClick={runSummarize}>
+        {aiBusy === "sum" ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <Sparkles className="size-3.5 mr-1" />}
+        Summarize
+      </Button>
+      <Button size="sm" variant="outline" disabled={aiBusy !== null} onClick={runAutoTag}>
+        {aiBusy === "tag" ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <Tag className="size-3.5 mr-1" />}
+        Auto-tag
+      </Button>
+    </>
+  );
+
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] md:h-screen">
-      {/* Toolbar */}
       <div className="border-b border-border bg-card">
         <div className="px-4 py-3 flex flex-wrap items-center gap-2">
           <Input
@@ -88,12 +122,10 @@ function NewWriteup() {
             placeholder="Writeup title…"
             className="text-lg font-semibold flex-1 min-w-[200px] !border-0 !bg-transparent shadow-none focus-visible:ring-0 px-0"
           />
-          <Button variant="outline" onClick={() => save()} disabled={busy}>
+          <Button variant="outline" onClick={() => save(false)} disabled={busy}>
             <Save className="size-4 mr-1.5" />Save draft
           </Button>
-          <Button onClick={() => { setPublish(true); setTimeout(save, 0); }} disabled={busy}>
-            Publish
-          </Button>
+          <Button onClick={() => save(true)} disabled={busy}>Publish</Button>
         </div>
         <div className="px-4 pb-3 flex flex-wrap items-center gap-2 text-xs">
           <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}
@@ -116,47 +148,53 @@ function NewWriteup() {
           <div className="flex items-center gap-1 bg-input border border-border rounded px-2 py-1">
             <span className="text-muted-foreground">flag:</span>
             <input
-              value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="flag{...}"
-              className={`bg-transparent outline-none mono w-44 ${!revealFlag && flag ? "flag-blur" : ""}`}
+              type={revealFlag ? "text" : "password"}
+              value={flag}
+              onChange={(e) => setFlag(e.target.value)}
+              placeholder="flag{...}"
+              className="bg-transparent outline-none mono w-44"
             />
-            <button onClick={() => setRevealFlag(!revealFlag)} className="text-muted-foreground">
+            <button type="button" onClick={() => setRevealFlag(!revealFlag)} className="text-muted-foreground hover:text-primary">
               {revealFlag ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
             </button>
           </div>
 
-          <div className="flex items-center gap-1 bg-input border border-border rounded px-2 py-1">
-            {tools.map(t => (
-              <span key={t} className="bg-muted px-1.5 rounded mono text-[11px] flex items-center gap-1">
-                {t}
-                <button onClick={() => setTools(tools.filter(x => x !== t))}><X className="size-3" /></button>
-              </span>
-            ))}
-            <input value={toolDraft} onChange={(e) => setToolDraft(e.target.value)}
-                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTool(); } }}
-                   placeholder="+ tool"
-                   className="bg-transparent outline-none mono w-20" />
-          </div>
+          <ChipInput label="tools" items={tools} onRemove={(t) => setTools(tools.filter(x => x !== t))}
+                     draft={toolDraft} setDraft={setToolDraft}
+                     onAdd={() => addItem(setTools, tools, toolDraft, () => setToolDraft(""))} />
+          <ChipInput label="tags" items={tags} onRemove={(t) => setTags(tags.filter(x => x !== t))}
+                     draft={tagDraft} setDraft={setTagDraft}
+                     onAdd={() => addItem(setTags, tags, tagDraft, () => setTagDraft(""))} />
 
           <Input value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Short summary…"
                  className="flex-1 min-w-[200px]" />
         </div>
       </div>
 
-      {/* Split pane */}
-      <div className="flex-1 grid md:grid-cols-2 min-h-0">
-        <div className="border-r border-border min-h-0 overflow-auto">
-          <CodeMirror
-            value={body}
-            onChange={setBody}
-            extensions={[markdown()]}
-            theme={oneDark}
-            basicSetup={{ lineNumbers: true, foldGutter: true }}
-            height="100%"
-            style={{ fontSize: "14px", height: "100%" }}
-          />
-        </div>
-        <div className="overflow-auto p-6 prose-cyber" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="flex-1 min-h-0">
+        <MarkdownEditor value={body} onChange={setBody} extraToolbar={aiToolbar} />
       </div>
+    </div>
+  );
+}
+
+function ChipInput({ label, items, onRemove, draft, setDraft, onAdd }: {
+  label: string; items: string[]; onRemove: (s: string) => void;
+  draft: string; setDraft: (s: string) => void; onAdd: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 bg-input border border-border rounded px-2 py-1">
+      <span className="text-muted-foreground">{label}:</span>
+      {items.map(t => (
+        <span key={t} className="bg-muted px-1.5 rounded mono text-[11px] flex items-center gap-1">
+          {t}
+          <button onClick={() => onRemove(t)}><X className="size-3" /></button>
+        </span>
+      ))}
+      <input value={draft} onChange={(e) => setDraft(e.target.value)}
+             onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); onAdd(); } }}
+             placeholder="+"
+             className="bg-transparent outline-none mono w-16" />
     </div>
   );
 }

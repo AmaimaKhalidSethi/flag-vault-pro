@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate } from "@tan
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  LayoutDashboard, FileText, Users, User, Settings, LogOut, Plus, Menu, X,
+  LayoutDashboard, FileText, Users, User, Settings, LogOut, Plus, Menu, X, Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ export const Route = createFileRoute("/_app")({
 const NAV = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/writeups", label: "Writeups", icon: FileText },
+  { to: "/events", label: "Events", icon: Trophy },
   { to: "/team", label: "Team", icon: Users },
   { to: "/profile", label: "Profile", icon: User },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -127,7 +128,7 @@ function AppLayout() {
         </main>
 
         {/* Mobile bottom tabs */}
-        <nav className="md:hidden border-t border-border bg-card grid grid-cols-5">
+        <nav className="md:hidden border-t border-border bg-card grid grid-cols-6">
           {NAV.map((n) => {
             const active = path === n.to || path.startsWith(n.to + "/");
             return (
