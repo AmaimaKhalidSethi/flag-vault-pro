@@ -195,8 +195,10 @@ export type Database = {
           id: string
           is_published: boolean
           points: number
+          search_tsv: unknown
           slug: string
           summary: string | null
+          tags: string[]
           team_id: string | null
           title: string
           tools_used: string[]
@@ -213,8 +215,10 @@ export type Database = {
           id?: string
           is_published?: boolean
           points?: number
+          search_tsv?: unknown
           slug: string
           summary?: string | null
+          tags?: string[]
           team_id?: string | null
           title: string
           tools_used?: string[]
@@ -231,8 +235,10 @@ export type Database = {
           id?: string
           is_published?: boolean
           points?: number
+          search_tsv?: unknown
           slug?: string
           summary?: string | null
+          tags?: string[]
           team_id?: string | null
           title?: string
           tools_used?: string[]
@@ -262,6 +268,8 @@ export type Database = {
     Functions: {
       current_team_id: { Args: never; Returns: string }
       is_team_member: { Args: { _team_id: string }; Returns: boolean }
+      join_team_by_code: { Args: { _code: string }; Returns: string }
+      remove_team_member: { Args: { _target: string }; Returns: boolean }
     }
     Enums: {
       category:
