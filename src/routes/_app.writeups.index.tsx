@@ -169,9 +169,9 @@ function WriteupsList() {
 
           <FilterGroup title="Tags">
             <div className="flex flex-wrap gap-1 mb-1">
-              {search.tags.map(t => (
+              {search.tags.map((t: string) => (
                 <span key={t} className="text-[11px] bg-muted px-1.5 rounded mono flex items-center gap-1">
-                  {t}<button onClick={() => update({ tags: search.tags.filter(x => x !== t) })}><X className="size-3" /></button>
+                  {t}<button onClick={() => update({ tags: search.tags.filter((x: string) => x !== t) })}><X className="size-3" /></button>
                 </span>
               ))}
             </div>
