@@ -47,7 +47,7 @@ function AppLayout() {
     <div className="min-h-screen flex">
       {/* Desktop sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col border-r border-border bg-card transition-[width]",
+        "hidden md:flex flex-col border-r border-border bg-card/70 backdrop-blur-md transition-[width]",
         collapsed ? "w-16" : "w-56"
       )}>
         <div className="h-14 flex items-center justify-between px-3 border-b border-border">
