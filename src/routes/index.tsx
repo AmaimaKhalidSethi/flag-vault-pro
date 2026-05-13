@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Flag, ShieldCheck, Terminal, Users } from "lucide-react";
+import { motion } from "framer-motion";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -11,16 +13,26 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+};
+const item = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const } },
+};
+
 function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b border-border">
+      <header className="border-b border-border/60 backdrop-blur-md bg-background/40">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="size-7 rounded bg-primary text-primary-foreground grid place-items-center font-bold">F</div>
             <span className="font-semibold tracking-tight">Flagvault</span>
           </Link>
           <nav className="flex items-center gap-2">
+            <ThemeToggle />
             <Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5">Sign in</Link>
             <Link to="/auth" className="text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-md font-medium hover:opacity-90">
               Get started
@@ -30,34 +42,44 @@ function Landing() {
       </header>
 
       <main className="flex-1">
-        <section className="relative overflow-hidden border-b border-border">
-          <div className="absolute inset-0 bg-grid opacity-60" />
+        <section className="relative overflow-hidden border-b border-border/50">
           <div className="relative max-w-4xl mx-auto px-6 py-24 text-center">
-            <span className="mono inline-flex text-xs px-2 py-1 rounded border border-border text-primary">
-              v1.0 — open beta
-            </span>
-            <h1 className="mt-5 text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]">
-              Document the flag.<br />
-              <span className="text-primary">Own the writeup.</span>
-            </h1>
-            <p className="mt-5 text-muted-foreground max-w-xl mx-auto">
-              A workspace built for CTF teams. Markdown editor, syntax-highlighted code,
-              category stats, and team-shared knowledge — all in a clean hacker-aesthetic UI.
-            </p>
-            <div className="mt-8 flex justify-center gap-3">
-              <Link to="/auth" className="bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-medium hover:opacity-90">
-                Start writing
-              </Link>
-              <a href="#features" className="border border-border px-5 py-2.5 rounded-md hover:bg-muted">
-                Features
-              </a>
-            </div>
+            <motion.div variants={stagger} initial="hidden" animate="show">
+              <motion.span
+                variants={item}
+                className="mono inline-flex text-xs px-2 py-1 rounded border border-border/70 text-primary glass"
+              >
+                v1.0 — open beta
+              </motion.span>
+              <motion.h1
+                variants={item}
+                className="mt-5 text-4xl md:text-6xl font-bold tracking-tight leading-[1.05]"
+              >
+                Document the flag.<br />
+                <span className="text-primary">Own the writeup.</span>
+              </motion.h1>
+              <motion.p variants={item} className="mt-5 text-muted-foreground max-w-xl mx-auto">
+                A workspace built for CTF teams. Markdown editor, syntax-highlighted code,
+                category stats, and team-shared knowledge — all in a clean hacker-aesthetic UI.
+              </motion.p>
+              <motion.div variants={item} className="mt-8 flex justify-center gap-3">
+                <Link to="/auth" className="bg-primary text-primary-foreground px-5 py-2.5 rounded-md font-medium hover:opacity-90 shadow-lg shadow-primary/20">
+                  Start writing
+                </Link>
+                <a href="#features" className="border border-border px-5 py-2.5 rounded-md hover:bg-muted glass">
+                  Features
+                </a>
+              </motion.div>
 
-            <div className="mt-12 mono text-left max-w-lg mx-auto bg-card border border-border rounded-lg p-4 text-sm">
-              <span className="text-muted-foreground">$ </span>
-              <span className="text-primary">flagvault</span> commit "pwn/babyheap — got RCE via tcache poisoning"
-              <div className="text-muted-foreground mt-1">→ writeup #042 published to team blueteam</div>
-            </div>
+              <motion.div
+                variants={item}
+                className="mt-12 mono text-left max-w-lg mx-auto glass-strong rounded-lg p-4 text-sm shadow-xl shadow-primary/5"
+              >
+                <span className="text-muted-foreground">$ </span>
+                <span className="text-primary">flagvault</span> commit "pwn/babyheap — got RCE via tcache poisoning"
+                <div className="text-muted-foreground mt-1">→ writeup #042 published to team blueteam</div>
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
@@ -69,17 +91,24 @@ function Landing() {
             { icon: Flag,     title: "Category stats", body: "Track solves by web/pwn/crypto/forensics/rev/misc/osint." },
             { icon: Terminal, title: "Search everything", body: "Full-text search across titles and bodies." },
             { icon: ShieldCheck, title: "AI-ready", body: "Auto-summarize and auto-tag slots wired in (BYO key)." },
-          ].map((f) => (
-            <div key={f.title} className="border border-border rounded-lg p-5 bg-card">
+          ].map((f, i) => (
+            <motion.div
+              key={f.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.4, delay: i * 0.05 }}
+              className="glass rounded-lg p-5 hover:border-primary/40 transition-colors"
+            >
               <f.icon className="size-5 text-primary" />
               <h3 className="mt-3 font-semibold">{f.title}</h3>
               <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
-            </div>
+            </motion.div>
           ))}
         </section>
       </main>
 
-      <footer className="border-t border-border">
+      <footer className="border-t border-border/60 backdrop-blur-md bg-background/40">
         <div className="max-w-6xl mx-auto px-6 py-6 text-xs text-muted-foreground flex justify-between">
           <span>© Flagvault</span>
           <span className="mono">v0.1.0</span>
