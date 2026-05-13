@@ -5,6 +5,7 @@ import {
   LayoutDashboard, FileText, Users, User, Settings, LogOut, Plus, Menu, X, Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -46,7 +47,7 @@ function AppLayout() {
     <div className="min-h-screen flex">
       {/* Desktop sidebar */}
       <aside className={cn(
-        "hidden md:flex flex-col border-r border-border bg-card transition-[width]",
+        "hidden md:flex flex-col border-r border-border bg-card/70 backdrop-blur-md transition-[width]",
         collapsed ? "w-16" : "w-56"
       )}>
         <div className="h-14 flex items-center justify-between px-3 border-b border-border">
@@ -85,7 +86,11 @@ function AppLayout() {
           })}
         </nav>
 
-        <div className="p-2 border-t border-border">
+        <div className="p-2 border-t border-border space-y-1">
+          <div className={cn("flex", collapsed ? "justify-center" : "justify-between items-center px-1")}>
+            {!collapsed && <span className="text-xs text-muted-foreground">Theme</span>}
+            <ThemeToggle />
+          </div>
           <button onClick={signOut} className={cn(
             "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted",
             collapsed && "justify-center px-0"
@@ -117,10 +122,13 @@ function AppLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="md:hidden h-14 flex items-center justify-between px-4 border-b border-border bg-card">
+        <header className="md:hidden h-14 flex items-center justify-between px-4 border-b border-border bg-card/70 backdrop-blur-md">
           <button onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
           <span className="font-semibold">Flagvault</span>
-          <Link to="/writeups/new"><Plus className="size-5 text-primary" /></Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link to="/writeups/new"><Plus className="size-5 text-primary" /></Link>
+          </div>
         </header>
 
         <main className="flex-1 min-w-0">
