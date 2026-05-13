@@ -79,7 +79,55 @@
   --cat-osint:     oklch(0.74 0.16 50);
 }
 
-.dark { /* same — dark only */ }
+.light {
+  --background: oklch(0.985 0.003 250);
+  --foreground: oklch(0.20 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.20 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.20 0.02 255);
+  --primary: oklch(0.62 0.14 175);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.95 0.01 250);
+  --secondary-foreground: oklch(0.20 0.02 255);
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.46 0.02 250);
+  --accent: oklch(0.93 0.04 180);
+  --accent-foreground: oklch(0.20 0.02 255);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.90 0.008 250);
+  --input: oklch(0.94 0.008 250);
+  --ring: oklch(0.62 0.14 175);
+
+  --success: oklch(0.62 0.16 150);
+  --warning: oklch(0.72 0.16 80);
+  --danger:  oklch(0.60 0.22 25);
+
+  --cat-web:       oklch(0.55 0.15 230);
+  --cat-pwn:       oklch(0.55 0.20 20);
+  --cat-crypto:    oklch(0.55 0.18 300);
+  --cat-forensics: oklch(0.60 0.14 80);
+  --cat-rev:       oklch(0.55 0.16 130);
+  --cat-misc:      oklch(0.50 0.02 240);
+  --cat-osint:     oklch(0.58 0.16 50);
+}
+
+html { transition: background-color .35s ease, color .35s ease; }
+
+/* Glassmorphism utility */
+.glass {
+  background: color-mix(in oklab, var(--color-card) 55%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 80%, transparent);
+}
+.glass-strong {
+  background: color-mix(in oklab, var(--color-card) 75%, transparent);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 90%, transparent);
+}
 
 @layer base {
   * { border-color: var(--color-border); }
