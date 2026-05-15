@@ -10,7 +10,6 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { InteractiveBackground } from "@/components/InteractiveBackground";
-import { CursorTrail } from "@/components/CursorTrail";
 
 import appCss from "../styles.css?url";
 
@@ -107,7 +106,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <InteractiveBackground />
-        <CursorTrail />
         <Outlet />
         <ThemedToaster />
       </ThemeProvider>
