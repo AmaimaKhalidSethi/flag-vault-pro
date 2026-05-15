@@ -33,6 +33,28 @@ function EventsList() {
     })();
   }, []);
 
+  // Realtime new/updated events
+  useEffect(() => {
+    const ch = supabase.channel("events:list")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "ctf_events" },
+          (payload) => {
+            const row = payload.new as Event;
+            setEvents((prev) => prev.find((e) => e.id === row.id) ? prev : [row, ...prev]);
+          })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "ctf_events" },
+          (payload) => {
+            const row = payload.new as Event;
+            setEvents((prev) => prev.map((e) => e.id === row.id ? row : e));
+          })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "writeups" },
+          (payload) => {
+            const r = payload.new as { event_id: string | null };
+            if (r.event_id) setCounts((c) => ({ ...c, [r.event_id!]: (c[r.event_id!] ?? 0) + 1 }));
+          })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-end justify-between gap-4 mb-5">

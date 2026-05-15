@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { aiSummarize, getAnthropicKey } from "@/lib/ai";
+import { SyndicateMenu } from "@/components/SyndicateMenu";
 
 export const Route = createFileRoute("/_app/writeups/$slug")({
   component: WriteupDetail,
@@ -139,11 +140,20 @@ function WriteupDetail() {
         <Link to="/writeups" className="text-xs mono text-primary hover:underline">← /writeups</Link>
         <div className="flex items-start justify-between gap-3 mt-2">
           <h1 className="text-3xl font-bold">{wu.title}</h1>
-          {wu.is_published && (
-            <Button size="sm" variant="outline" onClick={copyPublicLink}>
-              <Share2 className="size-3.5 mr-1" />Copy public link
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isAuthor && (
+              <SyndicateMenu writeup={{
+                title: wu.title, slug: slug, body_md: wu.body_md,
+                category: wu.category, tags: wu.tags ?? [],
+                ctf_name: wu.ctf_events?.name ?? null,
+              }} />
+            )}
+            {wu.is_published && (
+              <Button size="sm" variant="outline" onClick={copyPublicLink}>
+                <Share2 className="size-3.5 mr-1" />Copy public link
+              </Button>
+            )}
+          </div>
         </div>
         {wu.summary && <p className="text-muted-foreground mt-2">{wu.summary}</p>}
         <div className="flex flex-wrap gap-1.5 mt-3 text-xs">

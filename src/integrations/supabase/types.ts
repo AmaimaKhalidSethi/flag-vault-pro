@@ -153,6 +153,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_integrations: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          provider: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          provider: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          provider?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       writeup_tags: {
         Row: {
           tag_id: string
