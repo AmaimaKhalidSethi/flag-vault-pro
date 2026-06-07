@@ -1,13 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, slugify, type Category, type Difficulty } from "@/lib/categories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag } from "lucide-react";
 import { toast } from "sonner";
-import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { aiSummarize, aiAutoTag, getAnthropicKey } from "@/lib/ai";
+
+// Lazy-load the CodeMirror editor — keeps ~250KB out of the initial bundle
+const MarkdownEditor = lazy(() =>
+  import("@/components/MarkdownEditor").then((m) => ({ default: m.MarkdownEditor })),
+);
 
 export const Route = createFileRoute("/_app/writeups/new")({
   head: () => ({ meta: [{ title: "New writeup — Flagvault" }] }),
@@ -172,7 +176,9 @@ function NewWriteup() {
       </div>
 
       <div className="flex-1 min-h-0">
-        <MarkdownEditor value={body} onChange={setBody} extraToolbar={aiToolbar} />
+        <Suspense fallback={<div className="h-full grid place-items-center text-sm text-muted-foreground">Loading editor…</div>}>
+          <MarkdownEditor value={body} onChange={setBody} extraToolbar={aiToolbar} />
+        </Suspense>
       </div>
     </div>
   );
