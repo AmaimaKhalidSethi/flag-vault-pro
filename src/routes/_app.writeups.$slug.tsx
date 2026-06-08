@@ -131,6 +131,49 @@ function WriteupDetail() {
     } finally { setAiBusy(false); }
   }
 
+  // Optimistic publish toggle via TanStack Query
+  const publishMutation = useMutation({
+    mutationFn: async (next: boolean) => {
+      if (!wu) throw new Error("not loaded");
+      const { error } = await supabase.from("writeups").update({ is_published: next }).eq("id", wu.id);
+      if (error) throw error;
+      return next;
+    },
+    onMutate: async (next: boolean) => {
+      const prev = wu?.is_published ?? false;
+      if (wu) setWu({ ...wu, is_published: next });
+      return { prev };
+    },
+    onError: (_err, _next, ctx) => {
+      if (wu && ctx) setWu({ ...wu, is_published: ctx.prev });
+      toast.error("Failed to update — changes reverted");
+    },
+    onSuccess: async (next) => {
+      if (!wu) return;
+      toast.success(next ? "Published" : "Unpublished");
+      // Broadcast solve to event channel when going from draft → published
+      if (next && wu.event_id) {
+        const ch = supabase.channel(`event:${wu.event_id}`);
+        await new Promise<void>((resolve) => {
+          ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
+        });
+        await ch.send({
+          type: "broadcast",
+          event: "solve",
+          payload: {
+            type: "solve",
+            user: wu.profiles?.username ?? "anon",
+            challenge: wu.title,
+            category: wu.category,
+            points: wu.points,
+            timestamp: new Date().toISOString(),
+          },
+        });
+        await supabase.removeChannel(ch);
+      }
+    },
+  });
+
   if (loading) return <div className="p-6 mono text-sm text-muted-foreground">loading…</div>;
   if (!wu) return <div className="p-6">Not found.</div>;
 
