@@ -283,6 +283,29 @@ function WriteupDetail() {
         </div>
 
         {isAuthor && (
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">Visibility</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 mono">
+                  {wu.is_published ? "public" : "draft"}
+                </p>
+              </div>
+              <Switch
+                checked={wu.is_published}
+                onCheckedChange={(v) => publishMutation.mutate(v)}
+                aria-label="Toggle published"
+              />
+            </div>
+            {wu.event_id && (
+              <p className="text-[10px] text-muted-foreground mt-2 mono">
+                publishing broadcasts a solve to the event feed
+              </p>
+            )}
+          </div>
+        )}
+
+        {isAuthor && (
           <div className="bg-card border border-dashed border-primary/40 rounded-lg p-4">
             <h3 className="font-semibold text-sm flex items-center gap-1.5"><Sparkles className="size-4 text-primary" /> AI</h3>
             <p className="text-xs text-muted-foreground mt-2">
