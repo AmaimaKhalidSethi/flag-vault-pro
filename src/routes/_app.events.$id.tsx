@@ -2,12 +2,21 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
-import { format } from "date-fns";
-import { Calendar, ExternalLink, Check } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { Calendar, ExternalLink, Check, Flag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { PresenceStack, type PresenceUser } from "@/components/PresenceStack";
+
+type SolveBroadcast = {
+  type: "solve";
+  user: string;
+  challenge: string;
+  category: Category;
+  points: number;
+  timestamp: string;
+};
 
 export const Route = createFileRoute("/_app/events/$id")({
   component: EventDetail,
