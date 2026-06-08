@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { renderMarkdown } from "@/lib/markdown";
 import { categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
@@ -7,6 +8,7 @@ import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2 } from "l
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { aiSummarize, getAnthropicKey } from "@/lib/ai";
 import { SyndicateMenu } from "@/components/SyndicateMenu";
 
