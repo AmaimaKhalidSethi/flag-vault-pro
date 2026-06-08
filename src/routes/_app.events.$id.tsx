@@ -116,6 +116,12 @@ function EventDetail() {
       setPresence(users);
     });
 
+    ch.on("broadcast", { event: "solve" }, ({ payload }) => {
+      const s = payload as SolveBroadcast;
+      if (!s || s.type !== "solve") return;
+      setSolves((prev) => [...prev, s].slice(-50));
+    });
+
     ch.subscribe(async (status) => {
       if (status === "SUBSCRIBED") {
         await ch.track({ user_id: me, username: profile.username, avatar_url: profile.avatar_url });
