@@ -18,10 +18,19 @@ type Props = {
   extraToolbar?: React.ReactNode;
 };
 
+const VIM_STORAGE_KEY = "editor-vim-mode";
+
 export function MarkdownEditor({ value, onChange, extraToolbar }: Props) {
-  const [vimMode, setVimMode] = useState(false);
+  const [vimMode, setVimMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return window.localStorage.getItem(VIM_STORAGE_KEY) === "1"; } catch { return false; }
+  });
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
   const ref = useRef<ReactCodeMirrorRef>(null);
+
+  useEffect(() => {
+    try { window.localStorage.setItem(VIM_STORAGE_KEY, vimMode ? "1" : "0"); } catch { /* ignore */ }
+  }, [vimMode]);
 
   const debounced = useDebounced(value, 150);
   const html = useMemo(() => renderMarkdown(debounced), [debounced]);
@@ -123,6 +132,18 @@ export function MarkdownEditor({ value, onChange, extraToolbar }: Props) {
         </div>
         <div className={`overflow-auto p-6 prose-cyber ${mobileView === "edit" ? "hidden md:block" : ""}`}
              dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
+
+      <div className="border-t border-border bg-card px-3 py-1 flex items-center justify-between text-[10px] mono text-muted-foreground">
+        <div className="flex items-center gap-2">
+          {vimMode && (
+            <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 font-semibold tracking-wider">
+              VIM
+            </span>
+          )}
+          <span>markdown</span>
+        </div>
+        <span>{value.length} chars · {value.split(/\s+/).filter(Boolean).length} words</span>
       </div>
     </div>
   );
