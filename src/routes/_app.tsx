@@ -2,10 +2,11 @@ import { createFileRoute, Outlet, Link, useRouterState, useNavigate } from "@tan
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  LayoutDashboard, FileText, Users, User, Settings, LogOut, Plus, Menu, X, Trophy,
+  LayoutDashboard, FileText, Users, User, Settings, LogOut, Plus, Menu, X, Trophy, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { openCommandPalette } from "@/components/CommandPalette";
 
 export const Route = createFileRoute("/_app")({
   component: AppLayout,
@@ -68,6 +69,23 @@ function AppLayout() {
             <Plus className="size-4" />{!collapsed && "New writeup"}
           </Link>
 
+          <button
+            onClick={openCommandPalette}
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition",
+              collapsed && "justify-center px-0"
+            )}
+            title="Search (⌘K)"
+          >
+            <Search className="size-4" />
+            {!collapsed && (
+              <>
+                <span>Search…</span>
+                <kbd className="ml-auto mono text-[10px] border border-border rounded px-1.5 py-0.5">⌘K</kbd>
+              </>
+            )}
+          </button>
+
           <div className="h-px bg-border my-2" />
 
           {NAV.map((n) => {
@@ -126,6 +144,7 @@ function AppLayout() {
           <button onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
           <span className="font-semibold">Flagvault</span>
           <div className="flex items-center gap-2">
+            <button onClick={openCommandPalette} title="Search"><Search className="size-5 text-muted-foreground" /></button>
             <ThemeToggle />
             <Link to="/writeups/new"><Plus className="size-5 text-primary" /></Link>
           </div>
