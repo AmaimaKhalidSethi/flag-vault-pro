@@ -39,8 +39,14 @@ function EventDetail() {
   const [q, setQ] = useState("");
   const [presence, setPresence] = useState<PresenceUser[]>([]);
   const [me, setMe] = useState<string | null>(null);
+  const [solves, setSolves] = useState<SolveBroadcast[]>([]);
+  const feedRef = useRef<HTMLDivElement>(null);
   const wusRef = useRef<Wu[]>([]);
   wusRef.current = wus;
+
+  useEffect(() => {
+    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+  }, [solves]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
