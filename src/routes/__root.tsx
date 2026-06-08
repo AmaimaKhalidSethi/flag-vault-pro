@@ -10,6 +10,7 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { InteractiveBackground } from "@/components/InteractiveBackground";
+import { CommandPalette } from "@/components/CommandPalette";
 
 import appCss from "../styles.css?url";
 
@@ -112,6 +113,7 @@ function RootComponent() {
       <ThemeProvider>
         <InteractiveBackground />
         <Outlet />
+        <CommandPalette />
         <ThemedToaster />
       </ThemeProvider>
     </QueryClientProvider>

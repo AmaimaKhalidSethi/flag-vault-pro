@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { renderMarkdown } from "@/lib/markdown";
 import { categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
@@ -7,6 +8,7 @@ import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2 } from "l
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { aiSummarize, getAnthropicKey } from "@/lib/ai";
 import { SyndicateMenu } from "@/components/SyndicateMenu";
 
@@ -129,6 +131,49 @@ function WriteupDetail() {
     } finally { setAiBusy(false); }
   }
 
+  // Optimistic publish toggle via TanStack Query
+  const publishMutation = useMutation({
+    mutationFn: async (next: boolean) => {
+      if (!wu) throw new Error("not loaded");
+      const { error } = await supabase.from("writeups").update({ is_published: next }).eq("id", wu.id);
+      if (error) throw error;
+      return next;
+    },
+    onMutate: async (next: boolean) => {
+      const prev = wu?.is_published ?? false;
+      if (wu) setWu({ ...wu, is_published: next });
+      return { prev };
+    },
+    onError: (_err, _next, ctx) => {
+      if (wu && ctx) setWu({ ...wu, is_published: ctx.prev });
+      toast.error("Failed to update — changes reverted");
+    },
+    onSuccess: async (next) => {
+      if (!wu) return;
+      toast.success(next ? "Published" : "Unpublished");
+      // Broadcast solve to event channel when going from draft → published
+      if (next && wu.event_id) {
+        const ch = supabase.channel(`event:${wu.event_id}`);
+        await new Promise<void>((resolve) => {
+          ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
+        });
+        await ch.send({
+          type: "broadcast",
+          event: "solve",
+          payload: {
+            type: "solve",
+            user: wu.profiles?.username ?? "anon",
+            challenge: wu.title,
+            category: wu.category,
+            points: wu.points,
+            timestamp: new Date().toISOString(),
+          },
+        });
+        await supabase.removeChannel(ch);
+      }
+    },
+  });
+
   if (loading) return <div className="p-6 mono text-sm text-muted-foreground">loading…</div>;
   if (!wu) return <div className="p-6">Not found.</div>;
 
@@ -236,6 +281,29 @@ function WriteupDetail() {
             )}
           </dl>
         </div>
+
+        {isAuthor && (
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">Visibility</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 mono">
+                  {wu.is_published ? "public" : "draft"}
+                </p>
+              </div>
+              <Switch
+                checked={wu.is_published}
+                onCheckedChange={(v) => publishMutation.mutate(v)}
+                aria-label="Toggle published"
+              />
+            </div>
+            {wu.event_id && (
+              <p className="text-[10px] text-muted-foreground mt-2 mono">
+                publishing broadcasts a solve to the event feed
+              </p>
+            )}
+          </div>
+        )}
 
         {isAuthor && (
           <div className="bg-card border border-dashed border-primary/40 rounded-lg p-4">
