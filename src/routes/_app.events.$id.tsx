@@ -50,8 +50,15 @@ function EventDetail() {
     if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
   }, [solves]);
 
+  const [myTeamId, setMyTeamId] = useState<string | null>(null);
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
+    supabase.auth.getUser().then(async ({ data }) => {
+      setMe(data.user?.id ?? null);
+      if (data.user) {
+        const { data: p } = await supabase.from("profiles").select("team_id").eq("id", data.user.id).maybeSingle();
+        setMyTeamId(p?.team_id ?? null);
+      }
+    });
   }, []);
 
   useEffect(() => {
