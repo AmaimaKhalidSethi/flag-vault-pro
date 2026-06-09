@@ -1,22 +1,37 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, lazy, Suspense } from "react";
+import { z } from "zod";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, slugify, type Category, type Difficulty } from "@/lib/categories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { aiSummarize, aiAutoTag, getAnthropicKey } from "@/lib/ai";
+import { WRITEUP_TEMPLATES } from "@/lib/writeup-templates";
 
 // Lazy-load the CodeMirror editor — keeps ~250KB out of the initial bundle
 const MarkdownEditor = lazy(() =>
   import("@/components/MarkdownEditor").then((m) => ({ default: m.MarkdownEditor })),
 );
 
+const newSearchSchema = z.object({
+  challenge: fallback(z.string().optional(), undefined),
+  category: fallback(z.enum(CATEGORIES).optional(), undefined),
+  points: fallback(z.coerce.number().optional(), undefined),
+  event_id: fallback(z.string().optional(), undefined),
+  attempt_id: fallback(z.string().optional(), undefined),
+});
+
 export const Route = createFileRoute("/_app/writeups/new")({
   head: () => ({ meta: [{ title: "New writeup — Flagvault" }] }),
+  validateSearch: zodValidator(newSearchSchema),
   component: NewWriteup,
 });
+
+type PublishMode = "draft" | "now" | "schedule";
 
 type Event = { id: string; name: string };
 
