@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, UserMinus, Link2 } from "lucide-react";
+import { Copy, UserMinus, Link2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
