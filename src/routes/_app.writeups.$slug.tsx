@@ -25,12 +25,14 @@ type Wu = {
   flag: string | null; tools_used: string[]; tags: string[];
   created_at: string; author_id: string; event_id: string | null;
   is_published: boolean;
+  publish_at: string | null;
   profiles: { username: string | null; avatar_url: string | null } | null;
-  ctf_events: { name: string; url: string | null } | null;
+  ctf_events: { name: string; url: string | null; end_date: string | null } | null;
 };
 
 type Comment = {
   id: string; body: string; author_id: string; created_at: string; writeup_id: string;
+  parent_id: string | null;
   profiles?: { username: string | null } | null;
 };
 
