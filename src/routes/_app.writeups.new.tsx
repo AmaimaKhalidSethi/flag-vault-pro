@@ -261,9 +261,43 @@ function NewWriteup() {
 
       <div className="flex-1 min-h-0">
         <Suspense fallback={<div className="h-full grid place-items-center text-sm text-muted-foreground">Loading editor…</div>}>
-          <MarkdownEditor value={body} onChange={setBody} extraToolbar={aiToolbar} />
+          <MarkdownEditor value={body} onChange={handleBodyChange} extraToolbar={aiToolbar} />
         </Suspense>
       </div>
+
+      <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start from a template?</DialogTitle>
+            <DialogDescription>
+              Pre-fill the editor with a scaffold for <span className="mono text-primary">{category}</span> writeups, or start blank.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-xs mono text-muted-foreground border border-border rounded p-3 bg-muted/30 max-h-48 overflow-auto whitespace-pre-wrap">
+            {WRITEUP_TEMPLATES[category]}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <p className="text-xs text-muted-foreground w-full">Or pick a different category:</p>
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setCategory(c)}
+                      className={`text-[11px] px-2 py-1 rounded ${c === category ? categoryClass[c] : "border border-border text-muted-foreground"}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setBodyDirty(false); setTemplateOpen(false); }}>
+              Blank
+            </Button>
+            <Button onClick={() => applyTemplate(category)}>
+              Use {category} template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
     </div>
   );
 }
