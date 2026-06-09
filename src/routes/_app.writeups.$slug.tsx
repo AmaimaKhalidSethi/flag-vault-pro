@@ -3,18 +3,21 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { renderMarkdown } from "@/lib/markdown";
+import { renderCommentMarkdown } from "@/lib/comment-markdown";
 import { categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
-import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2, CalendarClock, Reply } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { aiSummarize, getAnthropicKey } from "@/lib/ai";
 import { SyndicateMenu } from "@/components/SyndicateMenu";
 
 export const Route = createFileRoute("/_app/writeups/$slug")({
   component: WriteupDetail,
 });
+
+type PublishMode = "draft" | "now" | "schedule";
 
 type Wu = {
   id: string; title: string; body_md: string; summary: string | null;
