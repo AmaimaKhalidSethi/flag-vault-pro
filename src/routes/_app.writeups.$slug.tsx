@@ -344,3 +344,104 @@ function WriteupDetail() {
     </div>
   );
 }
+
+function CommentsSection({
+  comments, me, draft, setDraft, onPost, onReply, onDelete,
+}: {
+  comments: Comment[];
+  me: string | null;
+  draft: string;
+  setDraft: (s: string) => void;
+  onPost: () => void;
+  onReply: (parentId: string, body: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const tops = comments.filter(c => !c.parent_id);
+  const repliesByParent = comments.reduce<Record<string, Comment[]>>((acc, c) => {
+    if (c.parent_id) (acc[c.parent_id] ??= []).push(c);
+    return acc;
+  }, {});
+
+  return (
+    <section className="mt-12">
+      <h2 className="font-semibold flex items-center gap-2">
+        <MessageCircle className="size-4" /> Comments ({comments.length})
+      </h2>
+      <div className="mt-3 space-y-3">
+        {tops.map(c => (
+          <CommentItem
+            key={c.id} c={c} me={me} replies={repliesByParent[c.id] ?? []}
+            onReply={onReply} onDelete={onDelete}
+          />
+        ))}
+        {tops.length === 0 && <p className="text-sm text-muted-foreground">No comments yet.</p>}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <textarea value={draft} onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Add a comment… markdown supported"
+                  className="flex-1 bg-input border border-border rounded-md px-3 py-2 text-sm min-h-[60px] mono" />
+        <Button onClick={onPost} disabled={!draft.trim()}>Post</Button>
+      </div>
+    </section>
+  );
+}
+
+function CommentItem({
+  c, me, replies, onReply, onDelete,
+}: {
+  c: Comment; me: string | null; replies: Comment[];
+  onReply: (parentId: string, body: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyDraft, setReplyDraft] = useState("");
+  const html = useMemo(() => renderCommentMarkdown(c.body), [c.body]);
+  return (
+    <div className="bg-card border border-border rounded-md p-3">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className="mono">@{c.profiles?.username ?? "anon"} · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+        <div className="flex items-center gap-2">
+          {me && (
+            <button onClick={() => setReplyOpen(o => !o)} className="text-muted-foreground hover:text-primary flex items-center gap-1">
+              <Reply className="size-3.5" />Reply
+            </button>
+          )}
+          {me === c.author_id && (
+            <button onClick={() => onDelete(c.id)} className="text-muted-foreground hover:text-danger"><Trash2 className="size-3.5" /></button>
+          )}
+        </div>
+      </div>
+      <div className="text-sm mt-1 prose-cyber" dangerouslySetInnerHTML={{ __html: html }} />
+      {replies.length > 0 && (
+        <div className="mt-2 pl-3 border-l-2 border-border space-y-2">
+          {replies.map(r => {
+            const rhtml = renderCommentMarkdown(r.body);
+            return (
+              <div key={r.id} className="bg-background/40 border border-border rounded-md p-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="mono">@{r.profiles?.username ?? "anon"} · {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
+                  {me === r.author_id && (
+                    <button onClick={() => onDelete(r.id)} className="text-muted-foreground hover:text-danger"><Trash2 className="size-3" /></button>
+                  )}
+                </div>
+                <div className="text-sm mt-1 prose-cyber" dangerouslySetInnerHTML={{ __html: rhtml }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {replyOpen && (
+        <div className="mt-2 flex gap-2">
+          <textarea value={replyDraft} onChange={(e) => setReplyDraft(e.target.value)}
+                    placeholder="Reply… markdown supported"
+                    className="flex-1 bg-input border border-border rounded-md px-3 py-2 text-xs min-h-[50px] mono" />
+          <Button size="sm" disabled={!replyDraft.trim()}
+                  onClick={() => { onReply(c.id, replyDraft); setReplyDraft(""); setReplyOpen(false); }}>
+            Post
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
