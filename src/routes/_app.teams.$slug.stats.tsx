@@ -51,7 +51,7 @@ function TeamStats() {
     enabled: !!teamId,
     staleTime: FIVE_MIN,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, username, avatar_url").eq("team_id", teamId);
+      const { data } = await supabase.from("profiles").select("id, username, avatar_url").eq("team_id", teamId!);
       return (data ?? []) as Member[];
     },
   });

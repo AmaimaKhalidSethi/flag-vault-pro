@@ -26,6 +26,8 @@ import { Route as AppWriteupsNewRouteImport } from './routes/_app.writeups.new'
 import { Route as AppWriteupsSlugRouteImport } from './routes/_app.writeups.$slug'
 import { Route as AppEventsNewRouteImport } from './routes/_app.events.new'
 import { Route as AppEventsIdRouteImport } from './routes/_app.events.$id'
+import { Route as ApiPublicHooksPublishScheduledWriteupsRouteImport } from './routes/api/public/hooks/publish-scheduled-writeups'
+import { Route as AppTeamsSlugStatsRouteImport } from './routes/_app.teams.$slug.stats'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -111,6 +113,17 @@ const AppEventsIdRoute = AppEventsIdRouteImport.update({
   path: '/events/$id',
   getParentRoute: () => AppRoute,
 } as any)
+const ApiPublicHooksPublishScheduledWriteupsRoute =
+  ApiPublicHooksPublishScheduledWriteupsRouteImport.update({
+    id: '/api/public/hooks/publish-scheduled-writeups',
+    path: '/api/public/hooks/publish-scheduled-writeups',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AppTeamsSlugStatsRoute = AppTeamsSlugStatsRouteImport.update({
+  id: '/teams/$slug/stats',
+  path: '/teams/$slug/stats',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -129,6 +142,8 @@ export interface FileRoutesByFullPath {
   '/events/': typeof AppEventsIndexRoute
   '/writeups/': typeof AppWriteupsIndexRoute
   '/u/$username/': typeof UUsernameIndexRoute
+  '/teams/$slug/stats': typeof AppTeamsSlugStatsRoute
+  '/api/public/hooks/publish-scheduled-writeups': typeof ApiPublicHooksPublishScheduledWriteupsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -147,6 +162,8 @@ export interface FileRoutesByTo {
   '/events': typeof AppEventsIndexRoute
   '/writeups': typeof AppWriteupsIndexRoute
   '/u/$username': typeof UUsernameIndexRoute
+  '/teams/$slug/stats': typeof AppTeamsSlugStatsRoute
+  '/api/public/hooks/publish-scheduled-writeups': typeof ApiPublicHooksPublishScheduledWriteupsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -167,6 +184,8 @@ export interface FileRoutesById {
   '/_app/events/': typeof AppEventsIndexRoute
   '/_app/writeups/': typeof AppWriteupsIndexRoute
   '/u/$username/': typeof UUsernameIndexRoute
+  '/_app/teams/$slug/stats': typeof AppTeamsSlugStatsRoute
+  '/api/public/hooks/publish-scheduled-writeups': typeof ApiPublicHooksPublishScheduledWriteupsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -187,6 +206,8 @@ export interface FileRouteTypes {
     | '/events/'
     | '/writeups/'
     | '/u/$username/'
+    | '/teams/$slug/stats'
+    | '/api/public/hooks/publish-scheduled-writeups'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -205,6 +226,8 @@ export interface FileRouteTypes {
     | '/events'
     | '/writeups'
     | '/u/$username'
+    | '/teams/$slug/stats'
+    | '/api/public/hooks/publish-scheduled-writeups'
   id:
     | '__root__'
     | '/'
@@ -224,6 +247,8 @@ export interface FileRouteTypes {
     | '/_app/events/'
     | '/_app/writeups/'
     | '/u/$username/'
+    | '/_app/teams/$slug/stats'
+    | '/api/public/hooks/publish-scheduled-writeups'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -234,6 +259,7 @@ export interface RootRouteChildren {
   JoinInvite_codeRoute: typeof JoinInvite_codeRoute
   UUsernameSlugRoute: typeof UUsernameSlugRoute
   UUsernameIndexRoute: typeof UUsernameIndexRoute
+  ApiPublicHooksPublishScheduledWriteupsRoute: typeof ApiPublicHooksPublishScheduledWriteupsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -357,6 +383,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppEventsIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/api/public/hooks/publish-scheduled-writeups': {
+      id: '/api/public/hooks/publish-scheduled-writeups'
+      path: '/api/public/hooks/publish-scheduled-writeups'
+      fullPath: '/api/public/hooks/publish-scheduled-writeups'
+      preLoaderRoute: typeof ApiPublicHooksPublishScheduledWriteupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app/teams/$slug/stats': {
+      id: '/_app/teams/$slug/stats'
+      path: '/teams/$slug/stats'
+      fullPath: '/teams/$slug/stats'
+      preLoaderRoute: typeof AppTeamsSlugStatsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -371,6 +411,7 @@ interface AppRouteChildren {
   AppWriteupsNewRoute: typeof AppWriteupsNewRoute
   AppEventsIndexRoute: typeof AppEventsIndexRoute
   AppWriteupsIndexRoute: typeof AppWriteupsIndexRoute
+  AppTeamsSlugStatsRoute: typeof AppTeamsSlugStatsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -384,6 +425,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWriteupsNewRoute: AppWriteupsNewRoute,
   AppEventsIndexRoute: AppEventsIndexRoute,
   AppWriteupsIndexRoute: AppWriteupsIndexRoute,
+  AppTeamsSlugStatsRoute: AppTeamsSlugStatsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -396,17 +438,9 @@ const rootRouteChildren: RootRouteChildren = {
   JoinInvite_codeRoute: JoinInvite_codeRoute,
   UUsernameSlugRoute: UUsernameSlugRoute,
   UUsernameIndexRoute: UUsernameIndexRoute,
+  ApiPublicHooksPublishScheduledWriteupsRoute:
+    ApiPublicHooksPublishScheduledWriteupsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
