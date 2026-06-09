@@ -100,10 +100,12 @@ function WriteupDetail() {
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  async function postComment() {
-    if (!draft.trim() || !wu || !me) return;
-    const { error } = await supabase.from("comments").insert({ writeup_id: wu.id, author_id: me, body: draft.trim() });
-    if (error) toast.error(error.message); else setDraft("");
+  async function postComment(parent_id: string | null = null, bodyText = draft) {
+    const text = bodyText.trim();
+    if (!text || !wu || !me) return;
+    const { error } = await supabase.from("comments").insert({ writeup_id: wu.id, author_id: me, body: text, parent_id });
+    if (error) toast.error(error.message);
+    else if (parent_id === null) setDraft("");
   }
   async function deleteComment(id: string) {
     const { error } = await supabase.from("comments").delete().eq("id", id);
