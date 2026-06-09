@@ -186,10 +186,34 @@ function NewWriteup() {
             placeholder="Writeup title…"
             className="text-lg font-semibold flex-1 min-w-[200px] !border-0 !bg-transparent shadow-none focus-visible:ring-0 px-0"
           />
-          <Button variant="outline" onClick={() => save(false)} disabled={busy}>
-            <Save className="size-4 mr-1.5" />Save draft
+          <div className="flex items-center rounded-md border border-border overflow-hidden text-xs">
+            {(["draft","now","schedule"] as PublishMode[]).map(m => (
+              <button key={m} onClick={() => setPublishMode(m)}
+                      className={`px-2.5 py-1.5 ${publishMode === m ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}>
+                {m === "draft" ? "Draft" : m === "now" ? "Publish now" : "Schedule"}
+              </button>
+            ))}
+          </div>
+          {publishMode === "schedule" && (
+            <div className="flex items-center gap-1">
+              <Input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)}
+                     className="w-56 text-xs" />
+              {linkedEvent?.end_date && (
+                <Button size="sm" variant="outline" type="button"
+                        onClick={() => {
+                          const d = new Date(linkedEvent.end_date!);
+                          const pad = (n: number) => String(n).padStart(2, "0");
+                          setScheduleAt(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                        }}>
+                  <CalendarClock className="size-3.5 mr-1" />Use event end
+                </Button>
+              )}
+            </div>
+          )}
+          <Button onClick={() => save(publishMode)} disabled={busy}>
+            <Save className="size-4 mr-1.5" />
+            {publishMode === "now" ? "Publish" : publishMode === "schedule" ? "Schedule" : "Save draft"}
           </Button>
-          <Button onClick={() => save(true)} disabled={busy}>Publish</Button>
         </div>
         <div className="px-4 pb-3 flex flex-wrap items-center gap-2 text-xs">
           <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}
