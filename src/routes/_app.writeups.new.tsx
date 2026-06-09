@@ -298,9 +298,7 @@ function NewWriteup() {
     </div>
   );
 }
-    </div>
-  );
-}
+
 
 function ChipInput({ label, items, onRemove, draft, setDraft, onAdd }: {
   label: string; items: string[]; onRemove: (s: string) => void;
