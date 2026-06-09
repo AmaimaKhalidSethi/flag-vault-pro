@@ -276,22 +276,52 @@ function WriteupDetail() {
         </div>
 
         {isAuthor && (
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm">Visibility</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 mono">
-                  {wu.is_published ? "public" : "draft"}
-                </p>
-              </div>
-              <Switch
-                checked={wu.is_published}
-                onCheckedChange={(v) => publishMutation.mutate(v)}
-                aria-label="Toggle published"
-              />
+          <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+            <h3 className="font-semibold text-sm">Visibility</h3>
+            <p className="text-xs text-muted-foreground mono">
+              {wu.is_published ? "public" : wu.publish_at ? `scheduled · ${format(new Date(wu.publish_at), "PPp")}` : "draft"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <Button size="sm" variant={!wu.is_published && !wu.publish_at ? "default" : "outline"}
+                      onClick={() => {
+                        publishMutation.mutate(false);
+                        supabase.from("writeups").update({ publish_at: null }).eq("id", wu.id);
+                        setWu({ ...wu, publish_at: null });
+                      }}>
+                Draft
+              </Button>
+              <Button size="sm" variant={wu.is_published ? "default" : "outline"}
+                      onClick={() => { publishMutation.mutate(true); setWu({ ...wu, publish_at: null }); }}>
+                Publish now
+              </Button>
+            </div>
+            <div className="flex gap-1.5 items-center">
+              <Input type="datetime-local"
+                     defaultValue={wu.publish_at ? new Date(wu.publish_at).toISOString().slice(0, 16) : ""}
+                     onChange={async (e) => {
+                       if (!e.target.value) return;
+                       const iso = new Date(e.target.value).toISOString();
+                       const { error } = await supabase.from("writeups")
+                         .update({ publish_at: iso, is_published: false }).eq("id", wu.id);
+                       if (error) toast.error(error.message);
+                       else { setWu({ ...wu, publish_at: iso, is_published: false }); toast.success("Scheduled"); }
+                     }}
+                     className="text-xs" />
+              {wu.ctf_events?.end_date && (
+                <Button size="sm" variant="outline" type="button" title="Use event end date"
+                        onClick={async () => {
+                          const iso = new Date(wu.ctf_events!.end_date!).toISOString();
+                          const { error } = await supabase.from("writeups")
+                            .update({ publish_at: iso, is_published: false }).eq("id", wu.id);
+                          if (error) toast.error(error.message);
+                          else { setWu({ ...wu, publish_at: iso, is_published: false }); toast.success("Scheduled at event end"); }
+                        }}>
+                  <CalendarClock className="size-3.5" />
+                </Button>
+              )}
             </div>
             {wu.event_id && (
-              <p className="text-[10px] text-muted-foreground mt-2 mono">
+              <p className="text-[10px] text-muted-foreground mono">
                 publishing broadcasts a solve to the event feed
               </p>
             )}
