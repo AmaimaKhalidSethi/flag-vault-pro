@@ -55,7 +55,7 @@ function WriteupDetail() {
       setLoading(true);
       const { data, error } = await supabase
         .from("writeups")
-        .select("*, profiles:author_id(username, avatar_url), ctf_events:event_id(name, url)")
+        .select("*, profiles:author_id(username, avatar_url), ctf_events:event_id(name, url, end_date)")
         .eq("slug", slug)
         .maybeSingle();
       if (error || !data) { setLoading(false); return; }
