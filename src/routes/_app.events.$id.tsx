@@ -229,44 +229,50 @@ function EventDetail() {
         )}
       </div>
 
-      {/* Live solve feed */}
-      <section className="mt-8 bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-4 py-2 border-b border-border flex items-center justify-between">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <span className="inline-block size-2 rounded-full bg-success animate-pulse" />
-            Live solves
-          </h2>
-          <span className="text-[10px] mono text-muted-foreground">{solves.length} this session</span>
-        </div>
-        <div ref={feedRef} className="max-h-64 overflow-y-auto p-3 space-y-1.5">
-          {solves.length === 0 && (
-            <p className="text-xs text-muted-foreground mono">// waiting for the next solve…</p>
-          )}
-          <AnimatePresence initial={false}>
-            {solves.map((s, i) => (
-              <motion.div
-                key={`${s.timestamp}-${i}`}
-                layout
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2 text-sm bg-background/40 border border-border/60 rounded px-2.5 py-1.5"
-              >
-                <Flag className="size-3.5 text-success shrink-0" />
-                <span className="mono text-primary">@{s.user}</span>
-                <span className="text-muted-foreground">solved</span>
-                <span className="font-medium truncate flex-1">{s.challenge}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${categoryClass[s.category]}`}>{s.category}</span>
-                <span className="text-[10px] mono text-muted-foreground border border-border rounded px-1.5 py-0.5">
-                  {s.points}pt
-                </span>
-                <span className="text-[10px] mono text-muted-foreground shrink-0">
-                  {formatDistanceToNow(new Date(s.timestamp), { addSuffix: true })}
-                </span>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      </section>
+      <Tabs defaultValue="feed" className="mt-8">
+        <TabsList>
+          <TabsTrigger value="feed">Live feed</TabsTrigger>
+          <TabsTrigger value="tracker">Team tracker</TabsTrigger>
+        </TabsList>
+        <TabsContent value="feed">
+          <section className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="px-4 py-2 border-b border-border flex items-center justify-between">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <span className="inline-block size-2 rounded-full bg-success animate-pulse" />
+                Live solves
+              </h2>
+              <span className="text-[10px] mono text-muted-foreground">{solves.length} this session</span>
+            </div>
+            <div ref={feedRef} className="max-h-64 overflow-y-auto p-3 space-y-1.5">
+              {solves.length === 0 && (
+                <p className="text-xs text-muted-foreground mono">// waiting for the next solve…</p>
+              )}
+              <AnimatePresence initial={false}>
+                {solves.map((s, i) => (
+                  <motion.div
+                    key={`${s.timestamp}-${i}`}
+                    layout
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-2 text-sm bg-background/40 border border-border/60 rounded px-2.5 py-1.5"
+                  >
+                    <Flag className="size-3.5 text-success shrink-0" />
+                    <span className="mono text-primary">@{s.user}</span>
+                    <span className="text-muted-foreground">solved</span>
+                    <span className="font-medium truncate flex-1">{s.challenge}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${categoryClass[s.category]}`}>{s.category}</span>
+                    <span className="text-[10px] mono text-muted-foreground border border-border rounded px-1.5 py-0.5">{s.points}pt</span>
+                    <span className="text-[10px] mono text-muted-foreground shrink-0">{formatDistanceToNow(new Date(s.timestamp), { addSuffix: true })}</span>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </section>
+        </TabsContent>
+        <TabsContent value="tracker">
+          <TeamTracker eventId={id} teamId={myTeamId} me={me} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
