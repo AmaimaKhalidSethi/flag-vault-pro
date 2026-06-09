@@ -129,9 +129,16 @@ function NewWriteup() {
     } finally { setAiBusy(null); }
   }
 
-  async function save(publish: boolean) {
+  async function save(mode: PublishMode) {
     if (!userId) return toast.error("Not signed in");
     if (!title.trim()) return toast.error("Title required");
+    let publish_at: string | null = null;
+    if (mode === "schedule") {
+      if (!scheduleAt) return toast.error("Pick a schedule date");
+      const d = new Date(scheduleAt);
+      if (isNaN(+d) || d <= new Date()) return toast.error("Schedule must be in the future");
+      publish_at = d.toISOString();
+    }
     setBusy(true);
     const slug = `${slugify(title)}-${Math.random().toString(36).slice(2, 6)}`;
     const { data, error } = await supabase.from("writeups").insert({
@@ -140,16 +147,22 @@ function NewWriteup() {
       flag: flag || null,
       tools_used: tools,
       tags,
-      is_published: publish,
+      is_published: mode === "now",
+      publish_at,
       team_id: teamId,
       author_id: userId,
       event_id: eventId || null,
-    }).select("slug").single();
+    }).select("id,slug").single();
+    if (error || !data) { setBusy(false); return toast.error(error?.message ?? "Save failed"); }
+    // Link back to the challenge attempt if launched from tracker
+    if (search.attempt_id) {
+      await supabase.from("challenge_attempts").update({ writeup_id: data.id }).eq("id", search.attempt_id);
+    }
     setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(publish ? "Published" : "Saved as draft");
+    toast.success(mode === "now" ? "Published" : mode === "schedule" ? "Scheduled" : "Saved as draft");
     nav({ to: "/writeups/$slug", params: { slug: data.slug } });
   }
+
 
   const aiToolbar = (
     <>
