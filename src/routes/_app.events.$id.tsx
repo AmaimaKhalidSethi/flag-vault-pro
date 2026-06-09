@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { PresenceStack, type PresenceUser } from "@/components/PresenceStack";
+import { TeamTracker } from "@/components/TeamTracker";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 type SolveBroadcast = {
   type: "solve";
