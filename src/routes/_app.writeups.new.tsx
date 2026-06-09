@@ -1,46 +1,90 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, lazy, Suspense } from "react";
+import { z } from "zod";
+import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, slugify, type Category, type Difficulty } from "@/lib/categories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import { aiSummarize, aiAutoTag, getAnthropicKey } from "@/lib/ai";
+import { WRITEUP_TEMPLATES } from "@/lib/writeup-templates";
 
 // Lazy-load the CodeMirror editor — keeps ~250KB out of the initial bundle
 const MarkdownEditor = lazy(() =>
   import("@/components/MarkdownEditor").then((m) => ({ default: m.MarkdownEditor })),
 );
 
+const newSearchSchema = z.object({
+  challenge: fallback(z.string().optional(), undefined),
+  category: fallback(z.enum(CATEGORIES).optional(), undefined),
+  points: fallback(z.coerce.number().optional(), undefined),
+  event_id: fallback(z.string().optional(), undefined),
+  attempt_id: fallback(z.string().optional(), undefined),
+});
+
 export const Route = createFileRoute("/_app/writeups/new")({
   head: () => ({ meta: [{ title: "New writeup — Flagvault" }] }),
+  validateSearch: zodValidator(newSearchSchema),
   component: NewWriteup,
 });
 
-type Event = { id: string; name: string };
+type PublishMode = "draft" | "now" | "schedule";
+
+type Event = { id: string; name: string; end_date: string | null };
+
+const DEFAULT_BODY = "# Writeup\n\nDescribe the challenge…\n\n## Solution\n\n```bash\necho \"hello world\"\n```\n";
 
 function NewWriteup() {
   const nav = useNavigate();
+  const search = Route.useSearch();
   const [userId, setUserId] = useState<string | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(search.challenge ?? "");
   const [summary, setSummary] = useState("");
-  const [body, setBody] = useState("# Writeup\n\nDescribe the challenge…\n\n## Solution\n\n```bash\necho \"hello world\"\n```\n");
-  const [category, setCategory] = useState<Category>("web");
+  const [body, setBody] = useState(DEFAULT_BODY);
+  const [bodyDirty, setBodyDirty] = useState(false);
+  const [category, setCategory] = useState<Category>(search.category ?? "web");
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
-  const [points, setPoints] = useState(100);
+  const [points, setPoints] = useState<number>(search.points ?? 100);
   const [flag, setFlag] = useState("");
   const [revealFlag, setRevealFlag] = useState(false);
   const [tools, setTools] = useState<string[]>([]);
   const [toolDraft, setToolDraft] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
-  const [eventId, setEventId] = useState<string>("");
+  const [eventId, setEventId] = useState<string>(search.event_id ?? "");
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState<null | "sum" | "tag">(null);
+
+  // Publish mode controls
+  const [publishMode, setPublishMode] = useState<PublishMode>("draft");
+  const [scheduleAt, setScheduleAt] = useState<string>(""); // datetime-local value
+
+  // Template modal: ask once on mount, and re-ask if category changes while body is untouched
+  const [templateOpen, setTemplateOpen] = useState(true);
+
+  function handleBodyChange(v: string) {
+    setBody(v);
+    if (!bodyDirty && v !== DEFAULT_BODY) setBodyDirty(true);
+  }
+
+  function applyTemplate(cat: Category) {
+    setBody(WRITEUP_TEMPLATES[cat]);
+    setBodyDirty(false);
+    setTemplateOpen(false);
+  }
+
+  // Re-prompt when user changes category before they've started writing
+  useEffect(() => {
+    if (!bodyDirty && body !== DEFAULT_BODY && !Object.values(WRITEUP_TEMPLATES).includes(body)) {
+      // user edited — don't re-prompt
+    }
+  }, [body, bodyDirty]);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -48,10 +92,13 @@ function NewWriteup() {
       setUserId(data.session.user.id);
       const { data: prof } = await supabase.from("profiles").select("team_id").eq("id", data.session.user.id).maybeSingle();
       setTeamId(prof?.team_id ?? null);
-      const { data: ev } = await supabase.from("ctf_events").select("id,name").order("created_at", { ascending: false });
-      setEvents(ev ?? []);
+      const { data: ev } = await supabase.from("ctf_events").select("id,name,end_date").order("created_at", { ascending: false });
+      setEvents((ev ?? []) as Event[]);
     });
   }, []);
+
+  const linkedEvent = events.find(e => e.id === eventId);
+
 
   function addItem(set: (v: string[]) => void, list: string[], v: string, clear: () => void) {
     const t = v.trim().toLowerCase();
@@ -82,9 +129,16 @@ function NewWriteup() {
     } finally { setAiBusy(null); }
   }
 
-  async function save(publish: boolean) {
+  async function save(mode: PublishMode) {
     if (!userId) return toast.error("Not signed in");
     if (!title.trim()) return toast.error("Title required");
+    let publish_at: string | null = null;
+    if (mode === "schedule") {
+      if (!scheduleAt) return toast.error("Pick a schedule date");
+      const d = new Date(scheduleAt);
+      if (isNaN(+d) || d <= new Date()) return toast.error("Schedule must be in the future");
+      publish_at = d.toISOString();
+    }
     setBusy(true);
     const slug = `${slugify(title)}-${Math.random().toString(36).slice(2, 6)}`;
     const { data, error } = await supabase.from("writeups").insert({
@@ -93,16 +147,22 @@ function NewWriteup() {
       flag: flag || null,
       tools_used: tools,
       tags,
-      is_published: publish,
+      is_published: mode === "now",
+      publish_at,
       team_id: teamId,
       author_id: userId,
       event_id: eventId || null,
-    }).select("slug").single();
+    }).select("id,slug").single();
+    if (error || !data) { setBusy(false); return toast.error(error?.message ?? "Save failed"); }
+    // Link back to the challenge attempt if launched from tracker
+    if (search.attempt_id) {
+      await supabase.from("challenge_attempts").update({ writeup_id: data.id }).eq("id", search.attempt_id);
+    }
     setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(publish ? "Published" : "Saved as draft");
+    toast.success(mode === "now" ? "Published" : mode === "schedule" ? "Scheduled" : "Saved as draft");
     nav({ to: "/writeups/$slug", params: { slug: data.slug } });
   }
+
 
   const aiToolbar = (
     <>
@@ -126,10 +186,34 @@ function NewWriteup() {
             placeholder="Writeup title…"
             className="text-lg font-semibold flex-1 min-w-[200px] !border-0 !bg-transparent shadow-none focus-visible:ring-0 px-0"
           />
-          <Button variant="outline" onClick={() => save(false)} disabled={busy}>
-            <Save className="size-4 mr-1.5" />Save draft
+          <div className="flex items-center rounded-md border border-border overflow-hidden text-xs">
+            {(["draft","now","schedule"] as PublishMode[]).map(m => (
+              <button key={m} onClick={() => setPublishMode(m)}
+                      className={`px-2.5 py-1.5 ${publishMode === m ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground"}`}>
+                {m === "draft" ? "Draft" : m === "now" ? "Publish now" : "Schedule"}
+              </button>
+            ))}
+          </div>
+          {publishMode === "schedule" && (
+            <div className="flex items-center gap-1">
+              <Input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)}
+                     className="w-56 text-xs" />
+              {linkedEvent?.end_date && (
+                <Button size="sm" variant="outline" type="button"
+                        onClick={() => {
+                          const d = new Date(linkedEvent.end_date!);
+                          const pad = (n: number) => String(n).padStart(2, "0");
+                          setScheduleAt(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                        }}>
+                  <CalendarClock className="size-3.5 mr-1" />Use event end
+                </Button>
+              )}
+            </div>
+          )}
+          <Button onClick={() => save(publishMode)} disabled={busy}>
+            <Save className="size-4 mr-1.5" />
+            {publishMode === "now" ? "Publish" : publishMode === "schedule" ? "Schedule" : "Save draft"}
           </Button>
-          <Button onClick={() => save(true)} disabled={busy}>Publish</Button>
         </div>
         <div className="px-4 pb-3 flex flex-wrap items-center gap-2 text-xs">
           <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}
@@ -177,12 +261,44 @@ function NewWriteup() {
 
       <div className="flex-1 min-h-0">
         <Suspense fallback={<div className="h-full grid place-items-center text-sm text-muted-foreground">Loading editor…</div>}>
-          <MarkdownEditor value={body} onChange={setBody} extraToolbar={aiToolbar} />
+          <MarkdownEditor value={body} onChange={handleBodyChange} extraToolbar={aiToolbar} />
         </Suspense>
       </div>
+
+      <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start from a template?</DialogTitle>
+            <DialogDescription>
+              Pre-fill the editor with a scaffold for <span className="mono text-primary">{category}</span> writeups, or start blank.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="text-xs mono text-muted-foreground border border-border rounded p-3 bg-muted/30 max-h-48 overflow-auto whitespace-pre-wrap">
+            {WRITEUP_TEMPLATES[category]}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <p className="text-xs text-muted-foreground w-full">Or pick a different category:</p>
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setCategory(c)}
+                      className={`text-[11px] px-2 py-1 rounded ${c === category ? categoryClass[c] : "border border-border text-muted-foreground"}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setBodyDirty(false); setTemplateOpen(false); }}>
+              Blank
+            </Button>
+            <Button onClick={() => applyTemplate(category)}>
+              Use {category} template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
 
 function ChipInput({ label, items, onRemove, draft, setDraft, onAdd }: {
   label: string; items: string[]; onRemove: (s: string) => void;

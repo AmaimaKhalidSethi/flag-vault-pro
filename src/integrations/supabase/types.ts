@@ -14,12 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      challenge_attempts: {
+        Row: {
+          category: Database["public"]["Enums"]["category"]
+          challenge_name: string
+          claimed_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          points: number | null
+          status: Database["public"]["Enums"]["challenge_status"]
+          team_id: string
+          updated_at: string
+          writeup_id: string | null
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["category"]
+          challenge_name: string
+          claimed_by?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          points?: number | null
+          status?: Database["public"]["Enums"]["challenge_status"]
+          team_id: string
+          updated_at?: string
+          writeup_id?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["category"]
+          challenge_name?: string
+          claimed_by?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          points?: number | null
+          status?: Database["public"]["Enums"]["challenge_status"]
+          team_id?: string
+          updated_at?: string
+          writeup_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_attempts_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_attempts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "ctf_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_attempts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_attempts_writeup_id_fkey"
+            columns: ["writeup_id"]
+            isOneToOne: false
+            referencedRelation: "writeups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           author_id: string
           body: string
           created_at: string
           id: string
+          parent_id: string | null
           writeup_id: string
         }
         Insert: {
@@ -27,6 +99,7 @@ export type Database = {
           body: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           writeup_id: string
         }
         Update: {
@@ -34,9 +107,17 @@ export type Database = {
           body?: string
           created_at?: string
           id?: string
+          parent_id?: string | null
           writeup_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "comments_writeup_id_fkey"
             columns: ["writeup_id"]
@@ -225,6 +306,7 @@ export type Database = {
           id: string
           is_published: boolean
           points: number
+          publish_at: string | null
           search_tsv: unknown
           slug: string
           summary: string | null
@@ -245,6 +327,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           points?: number
+          publish_at?: string | null
           search_tsv?: unknown
           slug: string
           summary?: string | null
@@ -265,6 +348,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           points?: number
+          publish_at?: string | null
           search_tsv?: unknown
           slug?: string
           summary?: string | null
@@ -310,6 +394,7 @@ export type Database = {
         | "rev"
         | "misc"
         | "osint"
+      challenge_status: "unsolved" | "attempting" | "solved"
       difficulty: "easy" | "medium" | "hard" | "insane"
     }
     CompositeTypes: {
@@ -439,6 +524,7 @@ export const Constants = {
   public: {
     Enums: {
       category: ["web", "pwn", "crypto", "forensics", "rev", "misc", "osint"],
+      challenge_status: ["unsolved", "attempting", "solved"],
       difficulty: ["easy", "medium", "hard", "insane"],
     },
   },

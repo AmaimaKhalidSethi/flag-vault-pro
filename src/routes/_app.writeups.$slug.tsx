@@ -3,12 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { renderMarkdown } from "@/lib/markdown";
+import { renderCommentMarkdown } from "@/lib/comment-markdown";
 import { categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
-import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2, CalendarClock, Reply } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { aiSummarize, getAnthropicKey } from "@/lib/ai";
 import { SyndicateMenu } from "@/components/SyndicateMenu";
 
@@ -16,18 +17,22 @@ export const Route = createFileRoute("/_app/writeups/$slug")({
   component: WriteupDetail,
 });
 
+type PublishMode = "draft" | "now" | "schedule";
+
 type Wu = {
   id: string; title: string; body_md: string; summary: string | null;
   category: Category; difficulty: Difficulty; points: number;
   flag: string | null; tools_used: string[]; tags: string[];
   created_at: string; author_id: string; event_id: string | null;
   is_published: boolean;
+  publish_at: string | null;
   profiles: { username: string | null; avatar_url: string | null } | null;
-  ctf_events: { name: string; url: string | null } | null;
+  ctf_events: { name: string; url: string | null; end_date: string | null } | null;
 };
 
 type Comment = {
   id: string; body: string; author_id: string; created_at: string; writeup_id: string;
+  parent_id: string | null;
   profiles?: { username: string | null } | null;
 };
 
@@ -50,7 +55,7 @@ function WriteupDetail() {
       setLoading(true);
       const { data, error } = await supabase
         .from("writeups")
-        .select("*, profiles:author_id(username, avatar_url), ctf_events:event_id(name, url)")
+        .select("*, profiles:author_id(username, avatar_url), ctf_events:event_id(name, url, end_date)")
         .eq("slug", slug)
         .maybeSingle();
       if (error || !data) { setLoading(false); return; }
@@ -95,10 +100,12 @@ function WriteupDetail() {
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  async function postComment() {
-    if (!draft.trim() || !wu || !me) return;
-    const { error } = await supabase.from("comments").insert({ writeup_id: wu.id, author_id: me, body: draft.trim() });
-    if (error) toast.error(error.message); else setDraft("");
+  async function postComment(parent_id: string | null = null, bodyText = draft) {
+    const text = bodyText.trim();
+    if (!text || !wu || !me) return;
+    const { error } = await supabase.from("comments").insert({ writeup_id: wu.id, author_id: me, body: text, parent_id });
+    if (error) toast.error(error.message);
+    else if (parent_id === null) setDraft("");
   }
   async function deleteComment(id: string) {
     const { error } = await supabase.from("comments").delete().eq("id", id);
@@ -210,29 +217,15 @@ function WriteupDetail() {
 
         <div className="mt-6 prose-cyber" dangerouslySetInnerHTML={{ __html: html }} />
 
-        <section className="mt-12">
-          <h2 className="font-semibold flex items-center gap-2"><MessageCircle className="size-4" /> Comments ({comments.length})</h2>
-          <div className="mt-3 space-y-3">
-            {comments.map(c => (
-              <div key={c.id} className="bg-card border border-border rounded-md p-3">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="mono">@{c.profiles?.username ?? "anon"} · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
-                  {me === c.author_id && (
-                    <button onClick={() => deleteComment(c.id)} className="text-muted-foreground hover:text-danger"><Trash2 className="size-3.5" /></button>
-                  )}
-                </div>
-                <p className="text-sm mt-1 whitespace-pre-wrap">{c.body}</p>
-              </div>
-            ))}
-            {comments.length === 0 && <p className="text-sm text-muted-foreground">No comments yet.</p>}
-          </div>
-          <div className="mt-3 flex gap-2">
-            <textarea value={draft} onChange={(e) => setDraft(e.target.value)}
-                      placeholder="Add a comment…"
-                      className="flex-1 bg-input border border-border rounded-md px-3 py-2 text-sm min-h-[60px]" />
-            <Button onClick={postComment} disabled={!draft.trim()}>Post</Button>
-          </div>
-        </section>
+        <CommentsSection
+          comments={comments}
+          me={me}
+          draft={draft}
+          setDraft={setDraft}
+          onPost={() => postComment(null, draft)}
+          onReply={(parentId, body) => postComment(parentId, body)}
+          onDelete={deleteComment}
+        />
       </article>
 
       <aside className="space-y-3">
@@ -283,22 +276,52 @@ function WriteupDetail() {
         </div>
 
         {isAuthor && (
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-sm">Visibility</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 mono">
-                  {wu.is_published ? "public" : "draft"}
-                </p>
-              </div>
-              <Switch
-                checked={wu.is_published}
-                onCheckedChange={(v) => publishMutation.mutate(v)}
-                aria-label="Toggle published"
-              />
+          <div className="bg-card border border-border rounded-lg p-4 space-y-2">
+            <h3 className="font-semibold text-sm">Visibility</h3>
+            <p className="text-xs text-muted-foreground mono">
+              {wu.is_published ? "public" : wu.publish_at ? `scheduled · ${format(new Date(wu.publish_at), "PPp")}` : "draft"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <Button size="sm" variant={!wu.is_published && !wu.publish_at ? "default" : "outline"}
+                      onClick={() => {
+                        publishMutation.mutate(false);
+                        supabase.from("writeups").update({ publish_at: null }).eq("id", wu.id);
+                        setWu({ ...wu, publish_at: null });
+                      }}>
+                Draft
+              </Button>
+              <Button size="sm" variant={wu.is_published ? "default" : "outline"}
+                      onClick={() => { publishMutation.mutate(true); setWu({ ...wu, publish_at: null }); }}>
+                Publish now
+              </Button>
+            </div>
+            <div className="flex gap-1.5 items-center">
+              <Input type="datetime-local"
+                     defaultValue={wu.publish_at ? new Date(wu.publish_at).toISOString().slice(0, 16) : ""}
+                     onChange={async (e) => {
+                       if (!e.target.value) return;
+                       const iso = new Date(e.target.value).toISOString();
+                       const { error } = await supabase.from("writeups")
+                         .update({ publish_at: iso, is_published: false }).eq("id", wu.id);
+                       if (error) toast.error(error.message);
+                       else { setWu({ ...wu, publish_at: iso, is_published: false }); toast.success("Scheduled"); }
+                     }}
+                     className="text-xs" />
+              {wu.ctf_events?.end_date && (
+                <Button size="sm" variant="outline" type="button" title="Use event end date"
+                        onClick={async () => {
+                          const iso = new Date(wu.ctf_events!.end_date!).toISOString();
+                          const { error } = await supabase.from("writeups")
+                            .update({ publish_at: iso, is_published: false }).eq("id", wu.id);
+                          if (error) toast.error(error.message);
+                          else { setWu({ ...wu, publish_at: iso, is_published: false }); toast.success("Scheduled at event end"); }
+                        }}>
+                  <CalendarClock className="size-3.5" />
+                </Button>
+              )}
             </div>
             {wu.event_id && (
-              <p className="text-[10px] text-muted-foreground mt-2 mono">
+              <p className="text-[10px] text-muted-foreground mono">
                 publishing broadcasts a solve to the event feed
               </p>
             )}
@@ -321,3 +344,104 @@ function WriteupDetail() {
     </div>
   );
 }
+
+function CommentsSection({
+  comments, me, draft, setDraft, onPost, onReply, onDelete,
+}: {
+  comments: Comment[];
+  me: string | null;
+  draft: string;
+  setDraft: (s: string) => void;
+  onPost: () => void;
+  onReply: (parentId: string, body: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const tops = comments.filter(c => !c.parent_id);
+  const repliesByParent = comments.reduce<Record<string, Comment[]>>((acc, c) => {
+    if (c.parent_id) (acc[c.parent_id] ??= []).push(c);
+    return acc;
+  }, {});
+
+  return (
+    <section className="mt-12">
+      <h2 className="font-semibold flex items-center gap-2">
+        <MessageCircle className="size-4" /> Comments ({comments.length})
+      </h2>
+      <div className="mt-3 space-y-3">
+        {tops.map(c => (
+          <CommentItem
+            key={c.id} c={c} me={me} replies={repliesByParent[c.id] ?? []}
+            onReply={onReply} onDelete={onDelete}
+          />
+        ))}
+        {tops.length === 0 && <p className="text-sm text-muted-foreground">No comments yet.</p>}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <textarea value={draft} onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Add a comment… markdown supported"
+                  className="flex-1 bg-input border border-border rounded-md px-3 py-2 text-sm min-h-[60px] mono" />
+        <Button onClick={onPost} disabled={!draft.trim()}>Post</Button>
+      </div>
+    </section>
+  );
+}
+
+function CommentItem({
+  c, me, replies, onReply, onDelete,
+}: {
+  c: Comment; me: string | null; replies: Comment[];
+  onReply: (parentId: string, body: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyDraft, setReplyDraft] = useState("");
+  const html = useMemo(() => renderCommentMarkdown(c.body), [c.body]);
+  return (
+    <div className="bg-card border border-border rounded-md p-3">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className="mono">@{c.profiles?.username ?? "anon"} · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+        <div className="flex items-center gap-2">
+          {me && (
+            <button onClick={() => setReplyOpen(o => !o)} className="text-muted-foreground hover:text-primary flex items-center gap-1">
+              <Reply className="size-3.5" />Reply
+            </button>
+          )}
+          {me === c.author_id && (
+            <button onClick={() => onDelete(c.id)} className="text-muted-foreground hover:text-danger"><Trash2 className="size-3.5" /></button>
+          )}
+        </div>
+      </div>
+      <div className="text-sm mt-1 prose-cyber" dangerouslySetInnerHTML={{ __html: html }} />
+      {replies.length > 0 && (
+        <div className="mt-2 pl-3 border-l-2 border-border space-y-2">
+          {replies.map(r => {
+            const rhtml = renderCommentMarkdown(r.body);
+            return (
+              <div key={r.id} className="bg-background/40 border border-border rounded-md p-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="mono">@{r.profiles?.username ?? "anon"} · {formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
+                  {me === r.author_id && (
+                    <button onClick={() => onDelete(r.id)} className="text-muted-foreground hover:text-danger"><Trash2 className="size-3" /></button>
+                  )}
+                </div>
+                <div className="text-sm mt-1 prose-cyber" dangerouslySetInnerHTML={{ __html: rhtml }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {replyOpen && (
+        <div className="mt-2 flex gap-2">
+          <textarea value={replyDraft} onChange={(e) => setReplyDraft(e.target.value)}
+                    placeholder="Reply… markdown supported"
+                    className="flex-1 bg-input border border-border rounded-md px-3 py-2 text-xs min-h-[50px] mono" />
+          <Button size="sm" disabled={!replyDraft.trim()}
+                  onClick={() => { onReply(c.id, replyDraft); setReplyDraft(""); setReplyOpen(false); }}>
+            Post
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
