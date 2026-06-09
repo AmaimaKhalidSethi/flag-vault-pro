@@ -33,29 +33,58 @@ export const Route = createFileRoute("/_app/writeups/new")({
 
 type PublishMode = "draft" | "now" | "schedule";
 
-type Event = { id: string; name: string };
+type Event = { id: string; name: string; end_date: string | null };
+
+const DEFAULT_BODY = "# Writeup\n\nDescribe the challenge…\n\n## Solution\n\n```bash\necho \"hello world\"\n```\n";
 
 function NewWriteup() {
   const nav = useNavigate();
+  const search = Route.useSearch();
   const [userId, setUserId] = useState<string | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
 
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(search.challenge ?? "");
   const [summary, setSummary] = useState("");
-  const [body, setBody] = useState("# Writeup\n\nDescribe the challenge…\n\n## Solution\n\n```bash\necho \"hello world\"\n```\n");
-  const [category, setCategory] = useState<Category>("web");
+  const [body, setBody] = useState(DEFAULT_BODY);
+  const [bodyDirty, setBodyDirty] = useState(false);
+  const [category, setCategory] = useState<Category>(search.category ?? "web");
   const [difficulty, setDifficulty] = useState<Difficulty>("easy");
-  const [points, setPoints] = useState(100);
+  const [points, setPoints] = useState<number>(search.points ?? 100);
   const [flag, setFlag] = useState("");
   const [revealFlag, setRevealFlag] = useState(false);
   const [tools, setTools] = useState<string[]>([]);
   const [toolDraft, setToolDraft] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
-  const [eventId, setEventId] = useState<string>("");
+  const [eventId, setEventId] = useState<string>(search.event_id ?? "");
   const [busy, setBusy] = useState(false);
   const [aiBusy, setAiBusy] = useState<null | "sum" | "tag">(null);
+
+  // Publish mode controls
+  const [publishMode, setPublishMode] = useState<PublishMode>("draft");
+  const [scheduleAt, setScheduleAt] = useState<string>(""); // datetime-local value
+
+  // Template modal: ask once on mount, and re-ask if category changes while body is untouched
+  const [templateOpen, setTemplateOpen] = useState(true);
+
+  function handleBodyChange(v: string) {
+    setBody(v);
+    if (!bodyDirty && v !== DEFAULT_BODY) setBodyDirty(true);
+  }
+
+  function applyTemplate(cat: Category) {
+    setBody(WRITEUP_TEMPLATES[cat]);
+    setBodyDirty(false);
+    setTemplateOpen(false);
+  }
+
+  // Re-prompt when user changes category before they've started writing
+  useEffect(() => {
+    if (!bodyDirty && body !== DEFAULT_BODY && !Object.values(WRITEUP_TEMPLATES).includes(body)) {
+      // user edited — don't re-prompt
+    }
+  }, [body, bodyDirty]);
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -63,10 +92,13 @@ function NewWriteup() {
       setUserId(data.session.user.id);
       const { data: prof } = await supabase.from("profiles").select("team_id").eq("id", data.session.user.id).maybeSingle();
       setTeamId(prof?.team_id ?? null);
-      const { data: ev } = await supabase.from("ctf_events").select("id,name").order("created_at", { ascending: false });
-      setEvents(ev ?? []);
+      const { data: ev } = await supabase.from("ctf_events").select("id,name,end_date").order("created_at", { ascending: false });
+      setEvents((ev ?? []) as Event[]);
     });
   }, []);
+
+  const linkedEvent = events.find(e => e.id === eventId);
+
 
   function addItem(set: (v: string[]) => void, list: string[], v: string, clear: () => void) {
     const t = v.trim().toLowerCase();
