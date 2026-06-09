@@ -1,76 +1,40 @@
-## Plan: Realtime Events + Syndication Pipeline
+# Plan: 5 Feature Additions
 
-### 1. Realtime CTF Event Engine
+This is a large batch. I'll implement all five in sequence, grouping DB migrations together where possible.
 
-**Migration** (`supabase/migrations/...sql`):
-- `ALTER PUBLICATION supabase_realtime ADD TABLE writeups, ctf_events, profiles;`
-- `ALTER TABLE writeups REPLICA IDENTITY FULL;` (same for ctf_events)
+## 1. Writeup templates per category
+- Add `src/lib/writeup-templates.ts` with the 7 category scaffolds.
+- In `src/routes/_app.writeups.new.tsx`, on mount show a Dialog: "Start from template?" with buttons "Use {category} template" / "Blank". Re-prompt when the user changes category if body is still untouched (track a `dirty` flag).
+- Pre-fill `body` from the template on confirm.
 
-**`src/routes/_app.events.$id.tsx`** — upgrade:
-- Subscribe to `postgres_changes` on `writeups WHERE event_id=...` → update list state on INSERT/UPDATE/DELETE.
-- Subscribe to Presence channel `event:{id}` tracking `{user_id, username, avatar_url}`.
-- Header shows avatar stack with neon-teal pulsing dot for each presence user.
-- On UPDATE event with `flag` newly set → trigger framer-motion success toast ("@user solved {title}").
-- Add "Mark Solved" inline action on cards (sets flag if owner/team member).
+## 2. Team challenge tracker
+- **Migration**: create `challenge_status` enum (unsolved/attempting/solved), `challenge_attempts` table with the listed columns, GRANTs, RLS via `is_team_member(team_id)`, `updated_at` trigger.
+- New component `src/components/TeamTracker.tsx`: 3-column board (no heavy DnD lib — use native HTML5 drag-and-drop to keep deps light). Inline form to add challenge (name, category select, points). "Claim" button sets `claimed_by = auth.uid()`. "Write up →" on solved opens `/writeups/new?challenge=&category=&points=&event_id=`.
+- Update `src/routes/_app.writeups.new.tsx` to read those query params and pre-fill.
+- On `_app.events.$id.tsx`: add Tabs ("Live feed" / "Team tracker"). Broadcast `tracker_update` on the existing event channel; subscribers refetch the tracker query.
 
-**`src/routes/_app.events.index.tsx`** — subscribe to event INSERT/UPDATE so list updates live.
+## 3. Scheduled / embargo publish
+- **Migration**: `ALTER TABLE writeups ADD COLUMN publish_at timestamptz`.
+- In both `_app.writeups.new.tsx` and `_app.writeups.$slug.tsx`: replace single publish toggle with a 3-option segmented control. "Schedule" reveals a date+time picker (shadcn Calendar + native time input). When `event_id` is set, show "Use event end date" shortcut button reading from loaded event.
+- **Cron**: prefer TanStack server route per guidelines (`/api/public/hooks/publish-scheduled-writeups`) using `supabaseAdmin`. Register via `pg_cron` calling that URL every 15 min. (User asked for "Edge Function" but project rules forbid Supabase Edge Functions for app-internal logic — I'll implement as TanStack server route + pg_cron, which is functionally identical and follows the stack rules.)
+- In writeup list UI: show clock icon + scheduled date when `publish_at > now()`.
 
-**New component** `src/components/PresenceStack.tsx`: avatar stack with pulse ring.
+## 4. Threaded markdown comments
+- **Migration**: `ALTER TABLE comments ADD COLUMN parent_id uuid REFERENCES comments(id) ON DELETE CASCADE`. Update RLS INSERT policy to allow replies on published writeups with valid `parent_id` (same writeup).
+- Update comment renderer (in `_app.writeups.$slug.tsx`): render `body` through a sanitized markdown pipeline. Add `DOMPurify` (small dep) + reuse existing `renderMarkdown`. Post-process links to add `target="_blank" rel="noopener noreferrer"`.
+- Add "Reply" button + inline editor; render replies indented under their parent (one level).
+- Comment count badge on writeup cards in `_app.writeups.index.tsx` and profile lists — single count query per visible writeup (aggregate query).
 
-### 2. Syndication Pipeline
+## 5. Team scoreboard page
+- New route `src/routes/_app.teams.$slug.stats.tsx` (auth-gated). Verify membership via `is_team_member` query; 404 otherwise.
+- Sections: overall stats, points-by-event bar chart, top solvers list, category breakdown bar chart, 6-month cumulative line chart. All TanStack Query, `staleTime: 5 * 60_000`.
+- Add "Stats" button on `_app.team.tsx` linking to it.
 
-**Migration**: create `user_integrations` table:
-```
-id uuid pk, user_id uuid, provider text check in ('github','medium','devto'),
-token text not null, metadata jsonb, created_at timestamptz
-unique(user_id, provider)
-```
-RLS: owner-only select/insert/update/delete via auth.uid()=user_id.
+## Order of operations
+1. Migrations 2+3+4 in a single SQL migration (table, column adds, policies).
+2. Templates + tracker + scheduling UI + threaded comments + scoreboard route + cron route.
+3. Insert pg_cron schedule via supabase insert tool after the route is live.
 
-**`src/lib/integrations.ts`**: helpers
-- `getIntegration(provider)`, `saveIntegration(provider, token, metadata?)`, `removeIntegration(provider)`
-- API wrappers (all client-side fetch with user-supplied tokens):
-  - `githubListRepos(token)`, `githubCommitFile(token, repo, path, content, message)`
-  - `mediumGetUser(token)`, `mediumCreatePost(token, userId, {title, contentFormat:'markdown', content, publishStatus, tags})`
-  - `devtoCreateArticle(token, {title, body_markdown, published, tags})`
-
-Note: Medium API has CORS restrictions — call via a TanStack server function proxy to avoid browser CORS issues. Same for GitHub (works from browser) and Dev.to (CORS open).
-
-Actually simpler: do all three through `createServerFn` proxies that take the token + payload from the client. Tokens stored in DB (RLS-protected). This avoids CORS entirely.
-
-**Server functions** `src/lib/syndication.functions.ts`:
-- `githubRepos`, `githubCommit`, `mediumPublish`, `devtoPublish` — each protected by `requireSupabaseAuth`, fetches token from `user_integrations` for current user.
-
-**`src/routes/_app.settings.tsx`** — add Integrations section:
-- 3 cards (GitHub, Medium, Dev.to), each with status badge, token input, connect/disconnect buttons.
-
-**`src/components/SyndicateMenu.tsx`** — DropdownMenu with three options:
-- GitHub → opens Dialog (repo select, path input, commit) 
-- Medium → opens Dialog (publishStatus draft/public)
-- Dev.to → opens Dialog (published toggle)
-- Loading spinner per action; success toast with link via `toast.success(<a href>)`.
-
-Add to `_app.writeups.$slug.tsx` (owner/team only) and `MarkdownEditor` toolbar.
-
-### Files
-**New:**
-- `supabase/migrations/{ts}_realtime_and_integrations.sql`
-- `src/components/PresenceStack.tsx`
-- `src/components/SyndicateMenu.tsx`
-- `src/lib/integrations.ts`
-- `src/lib/syndication.functions.ts`
-
-**Edited:**
-- `src/routes/_app.events.$id.tsx` (realtime + presence)
-- `src/routes/_app.events.index.tsx` (realtime list)
-- `src/routes/_app.settings.tsx` (integrations cards)
-- `src/routes/_app.writeups.$slug.tsx` (syndicate button)
-- `src/components/MarkdownEditor.tsx` (syndicate in toolbar — only if writeup exists; skip if too coupled)
-- `src/integrations/supabase/types.ts` (regenerated after migration)
-
-### Security notes
-- Tokens stored in `user_integrations` with strict RLS (`auth.uid() = user_id`).
-- Server fns validate ownership before use.
-- Never log tokens.
-
-Approve to implement.
+## Notes
+- Adds one dep: `dompurify` (for #4). No DnD lib for tracker — HTML5 native.
+- Following project rule: server route instead of Supabase Edge Function for the cron task.
