@@ -43,10 +43,12 @@ function WriteupsList() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventOpt[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
 
   const debouncedQ = useDebounced(search.q, 300);
   const debouncedAuthor = useDebounced(search.author, 300);
