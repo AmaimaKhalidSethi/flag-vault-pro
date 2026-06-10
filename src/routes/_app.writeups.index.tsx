@@ -225,7 +225,17 @@ function WriteupsList() {
                     className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition group">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold group-hover:text-primary line-clamp-2">{r.title}</h3>
-                  {!r.is_published && <span className="text-[10px] mono text-muted-foreground border border-border rounded px-1">draft</span>}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!r.is_published && r.publish_at && (
+                      <span title={`Scheduled for ${new Date(r.publish_at).toLocaleString()}`}
+                            className="text-[10px] mono text-warning border border-warning/40 rounded px-1 flex items-center gap-0.5">
+                        <Clock className="size-3" />{formatDistanceToNow(new Date(r.publish_at), { addSuffix: true })}
+                      </span>
+                    )}
+                    {!r.is_published && !r.publish_at && (
+                      <span className="text-[10px] mono text-muted-foreground border border-border rounded px-1">draft</span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.summary || "No summary."}</p>
                 <div className="flex flex-wrap gap-1.5 mt-3 text-xs">
@@ -233,6 +243,11 @@ function WriteupsList() {
                   <span className={`px-1.5 py-0.5 rounded ${difficultyClass[r.difficulty]}`}>{r.difficulty}</span>
                   <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground mono">{r.points} pts</span>
                   {r.flag && <span className="px-1.5 py-0.5 rounded bg-success/15 text-success border border-success/30 mono">flag set ✓</span>}
+                  {commentCounts[r.id] ? (
+                    <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground mono flex items-center gap-0.5">
+                      <MessageSquare className="size-3" />{commentCounts[r.id]}
+                    </span>
+                  ) : null}
                 </div>
                 {r.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -244,6 +259,7 @@ function WriteupsList() {
                   <span>{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
                 </div>
               </Link>
+
             ))}
           </div>
         </div>
