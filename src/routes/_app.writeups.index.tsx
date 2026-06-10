@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, X, Filter } from "lucide-react";
+import { Search, Plus, X, Filter, Clock, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useDebounced } from "@/hooks/use-debounced";
 
@@ -32,8 +32,10 @@ type Row = {
   category: Category; difficulty: Difficulty; points: number;
   created_at: string; author_id: string; is_published: boolean;
   flag: string | null; tags: string[]; event_id: string | null;
+  publish_at: string | null;
   profiles: { username: string | null; avatar_url: string | null } | null;
 };
+
 
 type EventOpt = { id: string; name: string };
 
@@ -41,10 +43,12 @@ function WriteupsList() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<EventOpt[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+
 
   const debouncedQ = useDebounced(search.q, 300);
   const debouncedAuthor = useDebounced(search.author, 300);
@@ -58,7 +62,7 @@ function WriteupsList() {
       setLoading(true);
       let query = supabase
         .from("writeups")
-        .select("id,title,slug,summary,category,difficulty,points,created_at,author_id,is_published,flag,tags,event_id, profiles:author_id(username, avatar_url)")
+        .select("id,title,slug,summary,category,difficulty,points,created_at,author_id,is_published,flag,tags,event_id,publish_at, profiles:author_id(username, avatar_url)")
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -80,8 +84,25 @@ function WriteupsList() {
       }
       setRows(result);
       setLoading(false);
+
+      // Fetch comment counts in parallel (best-effort)
+      if (result.length) {
+        const ids = result.map(r => r.id);
+        const { data: cs } = await supabase
+          .from("comments")
+          .select("writeup_id")
+          .in("writeup_id", ids);
+        const counts: Record<string, number> = {};
+        for (const row of (cs ?? []) as { writeup_id: string }[]) {
+          counts[row.writeup_id] = (counts[row.writeup_id] ?? 0) + 1;
+        }
+        setCommentCounts(counts);
+      } else {
+        setCommentCounts({});
+      }
     })();
   }, [debouncedQ, debouncedAuthor, search.category, search.difficulty, search.event, search.tags, search.from, search.to]);
+
 
   function update(patch: Partial<z.infer<typeof searchSchema>>) {
     navigate({ search: (prev: z.infer<typeof searchSchema>) => ({ ...prev, ...patch }) });
@@ -204,7 +225,17 @@ function WriteupsList() {
                     className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition group">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-semibold group-hover:text-primary line-clamp-2">{r.title}</h3>
-                  {!r.is_published && <span className="text-[10px] mono text-muted-foreground border border-border rounded px-1">draft</span>}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!r.is_published && r.publish_at && (
+                      <span title={`Scheduled for ${new Date(r.publish_at).toLocaleString()}`}
+                            className="text-[10px] mono text-warning border border-warning/40 rounded px-1 flex items-center gap-0.5">
+                        <Clock className="size-3" />{formatDistanceToNow(new Date(r.publish_at), { addSuffix: true })}
+                      </span>
+                    )}
+                    {!r.is_published && !r.publish_at && (
+                      <span className="text-[10px] mono text-muted-foreground border border-border rounded px-1">draft</span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{r.summary || "No summary."}</p>
                 <div className="flex flex-wrap gap-1.5 mt-3 text-xs">
@@ -212,6 +243,11 @@ function WriteupsList() {
                   <span className={`px-1.5 py-0.5 rounded ${difficultyClass[r.difficulty]}`}>{r.difficulty}</span>
                   <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground mono">{r.points} pts</span>
                   {r.flag && <span className="px-1.5 py-0.5 rounded bg-success/15 text-success border border-success/30 mono">flag set ✓</span>}
+                  {commentCounts[r.id] ? (
+                    <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground mono flex items-center gap-0.5">
+                      <MessageSquare className="size-3" />{commentCounts[r.id]}
+                    </span>
+                  ) : null}
                 </div>
                 {r.tags?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -223,6 +259,7 @@ function WriteupsList() {
                   <span>{formatDistanceToNow(new Date(r.created_at), { addSuffix: true })}</span>
                 </div>
               </Link>
+
             ))}
           </div>
         </div>

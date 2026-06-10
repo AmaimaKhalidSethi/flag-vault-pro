@@ -79,12 +79,13 @@ function NewWriteup() {
     setTemplateOpen(false);
   }
 
-  // Re-prompt when user changes category before they've started writing
+  // Re-open the template picker when category changes before user edits the body
   useEffect(() => {
-    if (!bodyDirty && body !== DEFAULT_BODY && !Object.values(WRITEUP_TEMPLATES).includes(body)) {
-      // user edited — don't re-prompt
-    }
-  }, [body, bodyDirty]);
+    if (bodyDirty) return;
+    setTemplateOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category]);
+
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
