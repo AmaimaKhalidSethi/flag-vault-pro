@@ -41,7 +41,14 @@ function PublicProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [team, setTeam] = useState<string | null>(null);
   const [wus, setWus] = useState<Wu[]>([]);
+  const [saved, setSaved] = useState<Wu[]>([]);
+  const [me, setMe] = useState<string | null>(null);
+  const [tab, setTab] = useState<"writeups" | "saved">("writeups");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setMe(data.user?.id ?? null));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -61,6 +68,23 @@ function PublicProfile() {
       setLoading(false);
     })();
   }, [username]);
+
+  const isOwner = !!me && !!profile && me === profile.id;
+
+  useEffect(() => {
+    if (!isOwner || !profile) return;
+    (async () => {
+      const { data } = await supabase
+        .from("bookmarks")
+        .select("writeup_id, writeups:writeup_id(id,title,slug,summary,category,difficulty,points,created_at,is_published)")
+        .eq("user_id", profile.id)
+        .order("created_at", { ascending: false });
+      const rows = ((data ?? []) as Array<{ writeups: Wu & { is_published: boolean } | null }>)
+        .map(r => r.writeups)
+        .filter((w): w is Wu & { is_published: boolean } => !!w && w.is_published);
+      setSaved(rows);
+    })();
+  }, [isOwner, profile]);
 
   const stats = useMemo(() => {
     const byCategory = CATEGORIES.map((c) => ({
@@ -187,23 +211,58 @@ function PublicProfile() {
           </section>
         )}
 
-        <h2 className="font-semibold mt-8 mb-3">Writeups</h2>
-        {wus.length === 0 && <p className="text-sm text-muted-foreground">No published writeups yet.</p>}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {wus.map(w => (
-            <Link key={w.id} to="/u/$username/$slug" params={{ username: profile.username!, slug: w.slug }}
-                  className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition group">
-              <h3 className="font-semibold group-hover:text-primary line-clamp-2">{w.title}</h3>
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{w.summary || "No summary."}</p>
-              <div className="flex flex-wrap gap-1.5 mt-3 text-xs">
-                <span className={`px-1.5 py-0.5 rounded ${categoryClass[w.category]}`}>{w.category}</span>
-                <span className={`px-1.5 py-0.5 rounded ${difficultyClass[w.difficulty]}`}>{w.difficulty}</span>
-                <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground mono">{w.points} pts</span>
-              </div>
-              <div className="text-xs text-muted-foreground mt-2">{formatDistanceToNow(new Date(w.created_at), { addSuffix: true })}</div>
-            </Link>
-          ))}
+        <div className="flex items-center gap-2 mt-8 mb-3 border-b border-border">
+          <button onClick={() => setTab("writeups")}
+                  className={`px-3 py-2 text-sm font-semibold ${tab === "writeups" ? "text-primary border-b-2 border-primary -mb-px" : "text-muted-foreground"}`}>
+            Writeups
+          </button>
+          {isOwner && (
+            <button onClick={() => setTab("saved")}
+                    className={`px-3 py-2 text-sm font-semibold ${tab === "saved" ? "text-primary border-b-2 border-primary -mb-px" : "text-muted-foreground"}`}>
+              Saved <span className="mono text-xs text-muted-foreground">({saved.length})</span>
+            </button>
+          )}
         </div>
+
+        {tab === "writeups" ? (
+          <>
+            {wus.length === 0 && <p className="text-sm text-muted-foreground">No published writeups yet.</p>}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {wus.map(w => (
+                <Link key={w.id} to="/u/$username/$slug" params={{ username: profile.username!, slug: w.slug }}
+                      className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition group">
+                  <h3 className="font-semibold group-hover:text-primary line-clamp-2">{w.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{w.summary || "No summary."}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-3 text-xs">
+                    <span className={`px-1.5 py-0.5 rounded ${categoryClass[w.category]}`}>{w.category}</span>
+                    <span className={`px-1.5 py-0.5 rounded ${difficultyClass[w.difficulty]}`}>{w.difficulty}</span>
+                    <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground mono">{w.points} pts</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">{formatDistanceToNow(new Date(w.created_at), { addSuffix: true })}</div>
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            {saved.length === 0 && <p className="text-sm text-muted-foreground">No bookmarks yet.</p>}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {saved.map(w => (
+                <Link key={w.id} to="/writeups/$slug" params={{ slug: w.slug }}
+                      className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition group">
+                  <h3 className="font-semibold group-hover:text-primary line-clamp-2">{w.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{w.summary || "No summary."}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-3 text-xs">
+                    <span className={`px-1.5 py-0.5 rounded ${categoryClass[w.category]}`}>{w.category}</span>
+                    <span className={`px-1.5 py-0.5 rounded ${difficultyClass[w.difficulty]}`}>{w.difficulty}</span>
+                    <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground mono">{w.points} pts</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">{formatDistanceToNow(new Date(w.created_at), { addSuffix: true })}</div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

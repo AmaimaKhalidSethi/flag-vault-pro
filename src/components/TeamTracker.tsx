@@ -238,24 +238,29 @@ export function TeamTracker({ eventId, teamId, me }: { eventId: string; teamId: 
                         <UserCheck className="size-3" />Claim
                       </button>
                     )}
-                    {a.status === "solved" && !a.writeup_id && (
-                      <button
-                        onClick={() => nav({
-                          to: "/writeups/new",
-                          search: {
-                            challenge: a.challenge_name,
-                            category: a.category,
-                            points: a.points ?? undefined,
-                            event_id: a.event_id,
-                            attempt_id: a.id,
-                          } as Record<string, unknown>,
-                        })}
-                        className="text-[10px] mono text-success hover:underline flex items-center gap-1 ml-auto"
-                      >
-                        <FileText className="size-3" />Write up →
-                      </button>
+                    {a.writeup_id && (
+                      <span className="text-[10px] mono text-success ml-auto flex items-center gap-1">
+                        <FileText className="size-3" />written up
+                      </span>
                     )}
                   </div>
+                  {a.status === "solved" && !a.writeup_id && (
+                    <button
+                      onClick={() => nav({
+                        to: "/writeups/new",
+                        search: {
+                          challenge: a.challenge_name,
+                          category: a.category,
+                          points: a.points ?? undefined,
+                          event_id: a.event_id,
+                          attempt_id: a.id,
+                        } as Record<string, unknown>,
+                      })}
+                      className="mt-2 w-full bg-success/15 hover:bg-success/25 border border-success/40 text-success rounded px-2 py-1.5 text-[11px] mono flex items-center justify-center gap-1 transition"
+                    >
+                      <FileText className="size-3.5" />Write up this challenge →
+                    </button>
+                  )}
                 </div>
               ))}
               {!isLoading && grouped[col.key].length === 0 && (

@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          writeup_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          writeup_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          writeup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookmarks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookmarks_writeup_id_fkey"
+            columns: ["writeup_id"]
+            isOneToOne: false
+            referencedRelation: "writeups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenge_attempts: {
         Row: {
           category: Database["public"]["Enums"]["category"]
@@ -185,6 +221,45 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          user_id: string
+          writeup_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          user_id: string
+          writeup_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          user_id?: string
+          writeup_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reactions_writeup_id_fkey"
+            columns: ["writeup_id"]
+            isOneToOne: false
+            referencedRelation: "writeups"
             referencedColumns: ["id"]
           },
         ]
