@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, X, Filter } from "lucide-react";
+import { Search, Plus, X, Filter, Clock, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useDebounced } from "@/hooks/use-debounced";
 
