@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { aiSummarize, getAnthropicKey } from "@/lib/ai";
 import { SyndicateMenu } from "@/components/SyndicateMenu";
+import { ReactionsBar } from "@/components/ReactionsBar";
+import { BookmarkButton } from "@/components/BookmarkButton";
 
 export const Route = createFileRoute("/_app/writeups/$slug")({
   component: WriteupDetail,
@@ -193,6 +195,7 @@ function WriteupDetail() {
         <div className="flex items-start justify-between gap-3 mt-2">
           <h1 className="text-3xl font-bold">{wu.title}</h1>
           <div className="flex items-center gap-2">
+            <BookmarkButton writeupId={wu.id} me={me} />
             {isAuthor && (
               <SyndicateMenu writeup={{
                 title: wu.title, slug: slug, body_md: wu.body_md,
@@ -216,6 +219,8 @@ function WriteupDetail() {
         </div>
 
         <div className="mt-6 prose-cyber" dangerouslySetInnerHTML={{ __html: html }} />
+
+        <ReactionsBar writeupId={wu.id} me={me} />
 
         <CommentsSection
           comments={comments}
