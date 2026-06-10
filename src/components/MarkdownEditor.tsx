@@ -7,7 +7,7 @@ import { vim } from "@replit/codemirror-vim";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import hljs from "highlight.js";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
 import { useDebounced } from "@/hooks/use-debounced";
 import {
   Bold, Italic, Code2, Link as LinkIcon, Image as ImageIcon, Minus,
@@ -200,13 +200,13 @@ export function MarkdownEditor({ value, onChange, extraToolbar }: Props) {
         {layout === "editor" && <div className="h-full">{editorPane}</div>}
         {layout === "preview" && <div className="h-full">{previewPane}</div>}
         {layout === "split" && (
-          <PanelGroup direction="horizontal" autoSaveId="writeup-editor-split">
-            <Panel defaultSize={50} minSize={25}>
-              <div className="h-full border-r border-border" style={{ minWidth: 300 }}>{editorPane}</div>
+          <PanelGroup orientation="horizontal" className="h-full flex">
+            <Panel defaultSize={{ value: 50, unit: "%" }} minSize={{ value: 300, unit: "px" }} className="h-full">
+              <div className="h-full border-r border-border">{editorPane}</div>
             </Panel>
-            <PanelResizeHandle className="w-1 bg-border hover:bg-primary/60 transition" />
-            <Panel defaultSize={50} minSize={25}>
-              <div className="h-full" style={{ minWidth: 300 }}>{previewPane}</div>
+            <PanelResizeHandle className="w-1 bg-border hover:bg-primary/60 transition cursor-col-resize" />
+            <Panel defaultSize={{ value: 50, unit: "%" }} minSize={{ value: 300, unit: "px" }} className="h-full">
+              <div className="h-full">{previewPane}</div>
             </Panel>
           </PanelGroup>
         )}
