@@ -77,7 +77,13 @@ function TeamPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <p className="mono text-xs text-primary">~/team</p>
-      <h1 className="text-2xl font-semibold mt-1">{team.name}</h1>
+      <div className="flex items-center justify-between mt-1 gap-3 flex-wrap">
+        <h1 className="text-2xl font-semibold">{team.name}</h1>
+        <Link to="/teams/$slug/stats" params={{ slug: team.slug }}>
+          <Button variant="outline" size="sm"><BarChart3 className="size-4 mr-1.5" />Stats</Button>
+        </Link>
+      </div>
+
 
       <div className="bg-card border border-border rounded-lg p-5 mt-5">
         <h2 className="font-semibold">Invite</h2>
