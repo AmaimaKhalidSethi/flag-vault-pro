@@ -201,11 +201,11 @@ export function MarkdownEditor({ value, onChange, extraToolbar }: Props) {
         {layout === "preview" && <div className="h-full">{previewPane}</div>}
         {layout === "split" && (
           <PanelGroup orientation="horizontal" className="h-full flex">
-            <Panel defaultSize={{ value: 50, unit: "%" }} minSize={{ value: 300, unit: "px" }} className="h-full">
+            <Panel defaultSize="50%" minSize="300px" className="h-full">
               <div className="h-full border-r border-border">{editorPane}</div>
             </Panel>
             <PanelResizeHandle className="w-1 bg-border hover:bg-primary/60 transition cursor-col-resize" />
-            <Panel defaultSize={{ value: 50, unit: "%" }} minSize={{ value: 300, unit: "px" }} className="h-full">
+            <Panel defaultSize="50%" minSize="300px" className="h-full">
               <div className="h-full">{previewPane}</div>
             </Panel>
           </PanelGroup>
