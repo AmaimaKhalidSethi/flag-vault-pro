@@ -62,7 +62,7 @@ function WriteupsList() {
       setLoading(true);
       let query = supabase
         .from("writeups")
-        .select("id,title,slug,summary,category,difficulty,points,created_at,author_id,is_published,flag,tags,event_id, profiles:author_id(username, avatar_url)")
+        .select("id,title,slug,summary,category,difficulty,points,created_at,author_id,is_published,flag,tags,event_id,publish_at, profiles:author_id(username, avatar_url)")
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -84,8 +84,25 @@ function WriteupsList() {
       }
       setRows(result);
       setLoading(false);
+
+      // Fetch comment counts in parallel (best-effort)
+      if (result.length) {
+        const ids = result.map(r => r.id);
+        const { data: cs } = await supabase
+          .from("comments")
+          .select("writeup_id")
+          .in("writeup_id", ids);
+        const counts: Record<string, number> = {};
+        for (const row of (cs ?? []) as { writeup_id: string }[]) {
+          counts[row.writeup_id] = (counts[row.writeup_id] ?? 0) + 1;
+        }
+        setCommentCounts(counts);
+      } else {
+        setCommentCounts({});
+      }
     })();
   }, [debouncedQ, debouncedAuthor, search.category, search.difficulty, search.event, search.tags, search.from, search.to]);
+
 
   function update(patch: Partial<z.infer<typeof searchSchema>>) {
     navigate({ search: (prev: z.infer<typeof searchSchema>) => ({ ...prev, ...patch }) });
