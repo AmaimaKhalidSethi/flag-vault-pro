@@ -7,10 +7,11 @@ import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, slugify, type
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag, CalendarClock } from "lucide-react";
+import { Eye, EyeOff, Save, X, Sparkles, Loader2, Tag, CalendarClock, Download } from "lucide-react";
 import { toast } from "sonner";
 import { aiSummarize, aiAutoTag, getAnthropicKey } from "@/lib/ai";
 import { WRITEUP_TEMPLATES } from "@/lib/writeup-templates";
+import { WriteupImportDrawer } from "@/components/WriteupImportDrawer";
 
 // Lazy-load the CodeMirror editor — keeps ~250KB out of the initial bundle
 const MarkdownEditor = lazy(() =>
@@ -67,6 +68,7 @@ function NewWriteup() {
 
   // Template modal: ask once on mount, and re-ask if category changes while body is untouched
   const [templateOpen, setTemplateOpen] = useState(true);
+  const [importOpen, setImportOpen] = useState(false);
 
   function handleBodyChange(v: string) {
     setBody(v);
@@ -211,6 +213,9 @@ function NewWriteup() {
               )}
             </div>
           )}
+          <Button type="button" size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+            <Download className="size-3.5 mr-1" />Import
+          </Button>
           <Button onClick={() => save(publishMode)} disabled={busy}>
             <Save className="size-4 mr-1.5" />
             {publishMode === "now" ? "Publish" : publishMode === "schedule" ? "Schedule" : "Save draft"}
@@ -296,6 +301,16 @@ function NewWriteup() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WriteupImportDrawer
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={({ body: b, title: t }) => {
+          setBody(b);
+          setBodyDirty(true);
+          if (t && !title.trim()) setTitle(t);
+        }}
+      />
     </div>
   );
 }
