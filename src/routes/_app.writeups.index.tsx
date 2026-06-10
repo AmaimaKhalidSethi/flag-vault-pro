@@ -32,8 +32,10 @@ type Row = {
   category: Category; difficulty: Difficulty; points: number;
   created_at: string; author_id: string; is_published: boolean;
   flag: string | null; tags: string[]; event_id: string | null;
+  publish_at: string | null;
   profiles: { username: string | null; avatar_url: string | null } | null;
 };
+
 
 type EventOpt = { id: string; name: string };
 
