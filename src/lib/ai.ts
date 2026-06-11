@@ -6,18 +6,21 @@ export const LEGACY_KEY_STORAGE = "flagvault.anthropic_key";
 
 export function getAnthropicKey(): string | null {
   if (typeof window === "undefined") return null;
-  return (
-    localStorage.getItem(ANTHROPIC_KEY_STORAGE) ||
-    localStorage.getItem(LEGACY_KEY_STORAGE) ||
-    null
-  );
+  // One-time migration: copy legacy key into the canonical slot, then remove it.
+  const legacy = localStorage.getItem(LEGACY_KEY_STORAGE);
+  if (legacy && !localStorage.getItem(ANTHROPIC_KEY_STORAGE)) {
+    localStorage.setItem(ANTHROPIC_KEY_STORAGE, legacy);
+    localStorage.removeItem(LEGACY_KEY_STORAGE);
+  } else if (legacy) {
+    localStorage.removeItem(LEGACY_KEY_STORAGE);
+  }
+  return localStorage.getItem(ANTHROPIC_KEY_STORAGE);
 }
 
 export function setAnthropicKey(key: string) {
   if (typeof window === "undefined") return;
   if (key) {
     localStorage.setItem(ANTHROPIC_KEY_STORAGE, key);
-    localStorage.setItem(LEGACY_KEY_STORAGE, key); // back-compat
   } else {
     localStorage.removeItem(ANTHROPIC_KEY_STORAGE);
     localStorage.removeItem(LEGACY_KEY_STORAGE);

@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+
 
 const UA = "flag-vault-pro/1.0";
 
@@ -12,6 +15,7 @@ function extractCtftimeId(input: string): string | null {
 }
 
 export const importCtftimeEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: { input: string }) =>
     z.object({ input: z.string().min(1).max(200) }).parse(data),
   )
@@ -47,6 +51,7 @@ function extractGistId(input: string): string | null {
 }
 
 export const importGist = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: { input: string }) =>
     z.object({ input: z.string().min(1).max(500) }).parse(data),
   )
@@ -79,6 +84,7 @@ export const importGist = createServerFn({ method: "POST" })
 
 // ── Raw markdown URL ───────────────────────────────────────────────────────────
 export const importRawMarkdown = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: { url: string }) =>
     z.object({ url: z.string().url().max(1000) }).parse(data),
   )

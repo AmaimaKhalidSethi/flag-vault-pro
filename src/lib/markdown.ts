@@ -1,4 +1,5 @@
 import { marked } from "marked";
+import DOMPurify from "dompurify";
 import hljs from "highlight.js";
 import "highlight.js/styles/atom-one-dark.css";
 
@@ -18,6 +19,9 @@ marked.use({
   },
 });
 
-export function renderMarkdown(md: string) {
-  return marked.parse(md || "", { async: false }) as string;
+export function renderMarkdown(md: string): string {
+  const raw = marked.parse(md || "", { async: false }) as string;
+  // DOMPurify requires a DOM; on the server (SSR) skip and return raw markup.
+  if (typeof window === "undefined") return raw;
+  return DOMPurify.sanitize(raw, { ADD_ATTR: ["data-copy", "target", "rel"] });
 }
