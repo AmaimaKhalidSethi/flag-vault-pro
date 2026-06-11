@@ -1,9 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+// This endpoint is called on a schedule (pg_cron → pg_net) to publish writeups
+// whose `publish_at` is in the past. It is protected by a shared secret header
+// `x-webhook-secret` which MUST match the `WEBHOOK_SECRET` environment variable
+// configured in Cloudflare Workers (the server runtime).
 export const Route = createFileRoute("/api/public/hooks/publish-scheduled-writeups")({
   server: {
     handlers: {
-      POST: async () => {
+      POST: async ({ request }) => {
+        const provided = request.headers.get("x-webhook-secret");
+        const expected = process.env.WEBHOOK_SECRET;
+        if (!provided || !expected || provided !== expected) {
+          return new Response("Unauthorized", { status: 401 });
+        }
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const nowIso = new Date().toISOString();
         const { data, error } = await supabaseAdmin

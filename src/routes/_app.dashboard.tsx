@@ -32,11 +32,17 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("writeups")
-      .select("id,title,slug,category,difficulty,points,created_at,author_id,tools_used")
-      .order("created_at", { ascending: false })
-      .limit(500)
-      .then(({ data }) => { setWus((data ?? []) as Wu[]); setLoading(false); });
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data } = await supabase.from("writeups")
+        .select("id,title,slug,category,difficulty,points,created_at,author_id,tools_used")
+        .eq("author_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      setWus((data ?? []) as Wu[]);
+      setLoading(false);
+    })();
   }, []);
 
   const total = wus.length;

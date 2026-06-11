@@ -1,6 +1,7 @@
-import { createFileRoute, Outlet, Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard, FileText, Users, User, Settings, LogOut, Plus, Menu, X, Trophy, Search,
 } from "lucide-react";
@@ -23,24 +24,20 @@ const NAV = [
 
 function AppLayout() {
   const nav = useNavigate();
-  const [ready, setReady] = useState(false);
+  const { session, loading } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const path = useRouterState({ select: (r) => r.location.pathname });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) nav({ to: "/auth" });
-      else setReady(true);
-    });
-  }, [nav]);
+    if (!loading && !session) nav({ to: "/auth" });
+  }, [loading, session, nav]);
 
   async function signOut() {
     await supabase.auth.signOut();
     nav({ to: "/" });
   }
 
-  if (!ready) {
+  if (loading || !session) {
     return <div className="min-h-screen grid place-items-center text-muted-foreground mono text-sm">authenticating…</div>;
   }
 
@@ -88,20 +85,22 @@ function AppLayout() {
 
           <div className="h-px bg-border my-2" />
 
-          {NAV.map((n) => {
-            const active = path === n.to || path.startsWith(n.to + "/");
-            return (
-              <Link key={n.to} to={n.to} className={cn(
+          {NAV.map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              activeProps={{ className: "bg-muted text-foreground" }}
+              activeOptions={{ exact: false }}
+              className={cn(
                 "relative flex items-center gap-2 px-3 py-2 rounded-md text-sm transition",
-                active ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                "text-muted-foreground hover:text-foreground hover:bg-muted/50",
                 collapsed && "justify-center px-0"
-              )}>
-                {active && <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] bg-primary rounded-r glow-teal" />}
-                <n.icon className="size-4" />
-                {!collapsed && <span>{n.label}</span>}
-              </Link>
-            );
-          })}
+              )}
+            >
+              <n.icon className="size-4" />
+              {!collapsed && <span>{n.label}</span>}
+            </Link>
+          ))}
         </nav>
 
         <div className="p-2 border-t border-border space-y-1">
@@ -156,18 +155,18 @@ function AppLayout() {
 
         {/* Mobile bottom tabs */}
         <nav className="md:hidden border-t border-border bg-card grid grid-cols-6">
-          {NAV.map((n) => {
-            const active = path === n.to || path.startsWith(n.to + "/");
-            return (
-              <Link key={n.to} to={n.to} className={cn(
-                "flex flex-col items-center justify-center py-2 text-xs",
-                active ? "text-primary" : "text-muted-foreground"
-              )}>
-                <n.icon className="size-4 mb-0.5" />
-                {n.label}
-              </Link>
-            );
-          })}
+          {NAV.map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              activeProps={{ className: "text-primary" }}
+              activeOptions={{ exact: false }}
+              className="flex flex-col items-center justify-center py-2 text-xs text-muted-foreground"
+            >
+              <n.icon className="size-4 mb-0.5" />
+              {n.label}
+            </Link>
+          ))}
         </nav>
       </div>
     </div>
