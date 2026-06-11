@@ -1,28 +1,28 @@
 // Anthropic client for browser-direct calls.
-// API key is read from localStorage and never sent to the backend.
+// API key is kept in sessionStorage (not persisted long-term) and never sent to the backend.
 
 export const ANTHROPIC_KEY_STORAGE = "fv_anthropic_key";
 export const LEGACY_KEY_STORAGE = "flagvault.anthropic_key";
 
 export function getAnthropicKey(): string | null {
   if (typeof window === "undefined") return null;
-  // One-time migration: copy legacy key into the canonical slot, then remove it.
+  // One-time migration: copy legacy key into session storage, then remove legacy localStorage entry.
   const legacy = localStorage.getItem(LEGACY_KEY_STORAGE);
-  if (legacy && !localStorage.getItem(ANTHROPIC_KEY_STORAGE)) {
-    localStorage.setItem(ANTHROPIC_KEY_STORAGE, legacy);
+  if (legacy && !sessionStorage.getItem(ANTHROPIC_KEY_STORAGE)) {
+    sessionStorage.setItem(ANTHROPIC_KEY_STORAGE, legacy);
     localStorage.removeItem(LEGACY_KEY_STORAGE);
   } else if (legacy) {
     localStorage.removeItem(LEGACY_KEY_STORAGE);
   }
-  return localStorage.getItem(ANTHROPIC_KEY_STORAGE);
+  return sessionStorage.getItem(ANTHROPIC_KEY_STORAGE);
 }
 
 export function setAnthropicKey(key: string) {
   if (typeof window === "undefined") return;
   if (key) {
-    localStorage.setItem(ANTHROPIC_KEY_STORAGE, key);
+    sessionStorage.setItem(ANTHROPIC_KEY_STORAGE, key);
   } else {
-    localStorage.removeItem(ANTHROPIC_KEY_STORAGE);
+    sessionStorage.removeItem(ANTHROPIC_KEY_STORAGE);
     localStorage.removeItem(LEGACY_KEY_STORAGE);
   }
 }

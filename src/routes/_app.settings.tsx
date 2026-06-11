@@ -150,7 +150,7 @@ function SettingsPage() {
   function saveKey() {
     setAnthropicKey(apiKey);
     setSavedKey(apiKey || null);
-    toast.success(apiKey ? "API key saved (locally only)" : "API key cleared");
+    toast.success(apiKey ? "API key saved (session only)" : "API key cleared");
   }
 
   const byProvider = (p: Provider) => integrations.find((i) => i.provider === p) ?? null;
