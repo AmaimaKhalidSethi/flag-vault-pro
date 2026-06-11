@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { renderMarkdown } from "@/lib/markdown";
-import { renderCommentMarkdown } from "@/lib/comment-markdown";
 import { categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
 import { Eye, EyeOff, MessageCircle, Sparkles, Trash2, Loader2, Share2, CalendarClock, Reply } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -142,43 +141,54 @@ function WriteupDetail() {
 
   // Optimistic publish toggle via TanStack Query
   const publishMutation = useMutation({
-    mutationFn: async (next: boolean) => {
+    mutationFn: async (next: { isPublished: boolean; clearSchedule?: boolean }) => {
       if (!wu) throw new Error("not loaded");
-      const { error } = await supabase.from("writeups").update({ is_published: next }).eq("id", wu.id);
+      const patch: { is_published: boolean; publish_at?: null } = { is_published: next.isPublished };
+      if (next.clearSchedule) patch.publish_at = null;
+      const { error } = await supabase.from("writeups").update(patch).eq("id", wu.id);
       if (error) throw error;
       return next;
     },
-    onMutate: async (next: boolean) => {
-      const prev = wu?.is_published ?? false;
-      if (wu) setWu({ ...wu, is_published: next });
+    onMutate: async (next) => {
+      const prev = { is_published: wu?.is_published ?? false, publish_at: wu?.publish_at ?? null };
+      if (wu) setWu({ ...wu, is_published: next.isPublished, ...(next.clearSchedule ? { publish_at: null } : {}) });
       return { prev };
     },
     onError: (_err, _next, ctx) => {
-      if (wu && ctx) setWu({ ...wu, is_published: ctx.prev });
+      if (wu && ctx) setWu({ ...wu, is_published: ctx.prev.is_published, publish_at: ctx.prev.publish_at });
       toast.error("Failed to update — changes reverted");
     },
     onSuccess: async (next) => {
       if (!wu) return;
-      toast.success(next ? "Published" : "Unpublished");
+      toast.success(next.isPublished ? "Published" : "Unpublished");
       // Broadcast solve to event channel when going from draft → published
-      if (next && wu.event_id) {
+      if (next.isPublished && wu.event_id) {
         const ch = supabase.channel(`event:${wu.event_id}`);
-        await new Promise<void>((resolve) => {
-          ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
-        });
-        await ch.send({
-          type: "broadcast",
-          event: "solve",
-          payload: {
-            type: "solve",
-            user: wu.profiles?.username ?? "anon",
-            challenge: wu.title,
-            category: wu.category,
-            points: wu.points,
-            timestamp: new Date().toISOString(),
-          },
-        });
-        await supabase.removeChannel(ch);
+        try {
+          const subscribePromise = new Promise<void>((resolve) => {
+            ch.subscribe((status) => { if (status === "SUBSCRIBED") resolve(); });
+          });
+          await Promise.race([
+            subscribePromise,
+            new Promise<void>((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+          ]);
+          await ch.send({
+            type: "broadcast",
+            event: "solve",
+            payload: {
+              type: "solve",
+              user: wu.profiles?.username ?? "anon",
+              challenge: wu.title,
+              category: wu.category,
+              points: wu.points,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        } catch (e) {
+          console.warn("solve broadcast failed", e);
+        } finally {
+          await supabase.removeChannel(ch);
+        }
       }
     },
   });
@@ -288,15 +298,11 @@ function WriteupDetail() {
             </p>
             <div className="flex flex-wrap gap-1.5">
               <Button size="sm" variant={!wu.is_published && !wu.publish_at ? "default" : "outline"}
-                      onClick={() => {
-                        publishMutation.mutate(false);
-                        supabase.from("writeups").update({ publish_at: null }).eq("id", wu.id);
-                        setWu({ ...wu, publish_at: null });
-                      }}>
+                      onClick={() => publishMutation.mutate({ isPublished: false, clearSchedule: true })}>
                 Draft
               </Button>
               <Button size="sm" variant={wu.is_published ? "default" : "outline"}
-                      onClick={() => { publishMutation.mutate(true); setWu({ ...wu, publish_at: null }); }}>
+                      onClick={() => publishMutation.mutate({ isPublished: true, clearSchedule: true })}>
                 Publish now
               </Button>
             </div>
@@ -400,7 +406,7 @@ function CommentItem({
 }) {
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyDraft, setReplyDraft] = useState("");
-  const html = useMemo(() => renderCommentMarkdown(c.body), [c.body]);
+  const html = useMemo(() => renderMarkdown(c.body), [c.body]);
   return (
     <div className="bg-card border border-border rounded-md p-3">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -420,7 +426,7 @@ function CommentItem({
       {replies.length > 0 && (
         <div className="mt-2 pl-3 border-l-2 border-border space-y-2">
           {replies.map(r => {
-            const rhtml = renderCommentMarkdown(r.body);
+            const rhtml = renderMarkdown(r.body);
             return (
               <div key={r.id} className="bg-background/40 border border-border rounded-md p-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
