@@ -60,9 +60,16 @@ function WriteupsList() {
   useEffect(() => {
     (async () => {
       setLoading(true);
+      const a = debouncedAuthor.trim();
+      // When filtering by author username we must INNER-join the profiles
+      // embed; PostgREST otherwise applies the column filter inside the
+      // embedded resource without restricting the parent rows.
+      const profileEmbed = a
+        ? "profiles:author_id!inner(username, avatar_url)"
+        : "profiles:author_id(username, avatar_url)";
       let query = supabase
         .from("writeups")
-        .select("id,title,slug,summary,category,difficulty,points,created_at,author_id,is_published,flag,tags,event_id,publish_at, profiles:author_id(username, avatar_url)")
+        .select(`id,title,slug,summary,category,difficulty,points,created_at,author_id,is_published,flag,tags,event_id,publish_at, ${profileEmbed}`)
         .order("created_at", { ascending: false })
         .limit(100);
 
@@ -75,13 +82,10 @@ function WriteupsList() {
       if (search.tags.length) query = query.contains("tags", search.tags);
       if (search.from) query = query.gte("created_at", search.from);
       if (search.to) query = query.lte("created_at", search.to + "T23:59:59");
+      if (a) query = query.ilike("profiles.username", `%${a}%`);
 
       const { data } = await query;
-      let result = (data ?? []) as unknown as Row[];
-      if (debouncedAuthor.trim()) {
-        const a = debouncedAuthor.trim().toLowerCase();
-        result = result.filter(r => (r.profiles?.username ?? "").toLowerCase().includes(a));
-      }
+      const result = (data ?? []) as unknown as Row[];
       setRows(result);
       setLoading(false);
 

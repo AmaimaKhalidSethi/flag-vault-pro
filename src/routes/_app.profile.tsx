@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { CATEGORIES, categoryClass, difficultyClass, type Category, type Difficulty } from "@/lib/categories";
 import { format } from "date-fns";
 
@@ -12,21 +13,19 @@ export const Route = createFileRoute("/_app/profile")({
 type Wu = { id: string; title: string; slug: string; category: Category; difficulty: Difficulty; points: number; created_at: string };
 
 function ProfilePage() {
-  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const { user } = useAuth();
   const [profile, setProfile] = useState<{ username: string | null; avatar_url: string | null; created_at: string } | null>(null);
   const [wus, setWus] = useState<Wu[]>([]);
 
   useEffect(() => {
+    if (!user) return;
     (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
-      setUser({ id: data.session.user.id, email: data.session.user.email });
-      const { data: p } = await supabase.from("profiles").select("username, avatar_url, created_at").eq("id", data.session.user.id).maybeSingle();
+      const { data: p } = await supabase.from("profiles").select("username, avatar_url, created_at").eq("id", user.id).maybeSingle();
       setProfile(p);
-      const { data: w } = await supabase.from("writeups").select("id,title,slug,category,difficulty,points,created_at").eq("author_id", data.session.user.id).order("created_at", { ascending: false });
+      const { data: w } = await supabase.from("writeups").select("id,title,slug,category,difficulty,points,created_at").eq("author_id", user.id).order("created_at", { ascending: false });
       setWus((w ?? []) as Wu[]);
     })();
-  }, []);
+  }, [user]);
 
   const total = wus.length;
   const points = wus.reduce((s, w) => s + (w.points || 0), 0);

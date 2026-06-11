@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, lazy, Suspense } from "react";
+import { nanoid } from "nanoid";
 import { z } from "zod";
 import { zodValidator, fallback } from "@tanstack/zod-adapter";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { CATEGORIES, DIFFICULTIES, categoryClass, difficultyClass, slugify, type Category, type Difficulty } from "@/lib/categories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,7 +43,8 @@ const DEFAULT_BODY = "# Writeup\n\nDescribe the challenge…\n\n## Solution\n\n`
 function NewWriteup() {
   const nav = useNavigate();
   const search = Route.useSearch();
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [teamId, setTeamId] = useState<string | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
 
@@ -90,15 +93,14 @@ function NewWriteup() {
 
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) return;
-      setUserId(data.session.user.id);
-      const { data: prof } = await supabase.from("profiles").select("team_id").eq("id", data.session.user.id).maybeSingle();
+    if (!userId) return;
+    (async () => {
+      const { data: prof } = await supabase.from("profiles").select("team_id").eq("id", userId).maybeSingle();
       setTeamId(prof?.team_id ?? null);
       const { data: ev } = await supabase.from("ctf_events").select("id,name,end_date").order("created_at", { ascending: false });
       setEvents((ev ?? []) as Event[]);
-    });
-  }, []);
+    })();
+  }, [userId]);
 
   const linkedEvent = events.find(e => e.id === eventId);
 
@@ -143,7 +145,7 @@ function NewWriteup() {
       publish_at = d.toISOString();
     }
     setBusy(true);
-    const slug = `${slugify(title)}-${Math.random().toString(36).slice(2, 6)}`;
+    const slug = `${slugify(title)}-${nanoid(8)}`;
     const { data, error } = await supabase.from("writeups").insert({
       title, slug, body_md: body, summary,
       difficulty, category, points: Number(points) || 0,
